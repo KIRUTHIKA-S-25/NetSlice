@@ -1,6 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, Dict
+
+# Database & Analytics Imports
+from database import (
+    init_db,
+    save_action_log,
+    get_recent_history,
+    get_action_logs,
+    get_analytics_summary
+)
 
 # Simulation Imports
 from simulation.slices import initialize_slices
@@ -8,8 +18,12 @@ from simulation.traffic_generator import TrafficGenerator
 from simulation.monitor import MetricsCollector
 from simulation.allocation import ResourceAllocationEngine
 from simulation.ml_engine import MLEngine
+from ai_assistant import generate_ai_response
 
-app = FastAPI(title="Network Slicing API")
+app = FastAPI(title="AI-Assisted Network Slicing API", version="2.0")
+
+# Initialize database
+init_db("network_logs.db")
 
 # Configure CORS
 app.add_middleware(
@@ -28,11 +42,42 @@ simulation_state = {
     "traffic_gen": None,
     "monitor": None,
     "allocation_engine": None,
-    "ml_engine": MLEngine()
+    "ml_engine": MLEngine(db_path="network_logs.db"),
+    "custom_static": {
+        "low_latency": 30.0,
+        "high_bandwidth": 50.0,
+        "general": 20.0
+    }
 }
 
 class ConfigPayload(BaseModel):
-    strategy: str # "static", "rule_based", "ai_assisted"
+    strategy: str
+    custom_static: Optional[Dict[str, float]] = None
+
+class SpikePayload(BaseModel):
+    slice_name: str
+    multiplier: float
+
+class ScenarioPayload(BaseModel):
+    scenario: str
+
+class StaticAllocationPayload(BaseModel):
+    low_latency: float
+    high_bandwidth: float
+    general: float
+
+class ChatPayload(BaseModel):
+    message: str
+
+@app.get("/api/status")
+def get_system_status():
+    return {
+        "is_running": simulation_state["is_running"],
+        "strategy": simulation_state["strategy"],
+        "ml_trained": simulation_state["ml_engine"].is_trained,
+        "ml_info": simulation_state["ml_engine"].training_info,
+        "custom_static": simulation_state["custom_static"]
+    }
 
 @app.post("/api/start")
 def start_simulation(payload: ConfigPayload):
@@ -40,38 +85,71 @@ def start_simulation(payload: ConfigPayload):
         return {"status": "error", "message": "Simulation already running"}
         
     simulation_state["strategy"] = payload.strategy
+    if payload.custom_static:
+        simulation_state["custom_static"] = payload.custom_static
+
     simulation_state["slices"] = initialize_slices()
     
-    simulation_state["traffic_gen"] = TrafficGenerator(simulation_state["slices"])
-    simulation_state["monitor"] = MetricsCollector(simulation_state["slices"])
-    simulation_state["allocation_engine"] = ResourceAllocationEngine(simulation_state["slices"])
+    # Initialize components
+    simulation_state["traffic_gen"] = TrafficGenerator(simulation_state["slices"], db_path="network_logs.db")
+    simulation_state["allocation_engine"] = ResourceAllocationEngine(simulation_state["slices"], db_path="network_logs.db")
     
+    # Set custom static configuration if provided
+    if simulation_state["custom_static"]:
+        simulation_state["allocation_engine"].set_custom_static_config(simulation_state["custom_static"])
+        
+    simulation_state["monitor"] = MetricsCollector(
+        simulation_state["slices"],
+        get_strategy_fn=lambda: simulation_state["strategy"],
+        db_path="network_logs.db"
+    )
+    
+    # Start threads
     simulation_state["traffic_gen"].start()
     simulation_state["monitor"].start()
     simulation_state["is_running"] = True
     
-    return {"status": "success", "message": f"Simulation started with {payload.strategy} strategy"}
+    save_action_log(
+        "network_logs.db",
+        "SYSTEM",
+        f"Simulation started under {payload.strategy.upper()} strategy."
+    )
+    
+    return {
+        "status": "success",
+        "message": f"Simulation started with {payload.strategy} strategy",
+        "allocations": {k: s.allocated_bandwidth for k, s in simulation_state["slices"].items()}
+    }
 
 @app.post("/api/stop")
 def stop_simulation():
     if not simulation_state["is_running"]:
         return {"status": "error", "message": "Simulation not running"}
         
-    simulation_state["traffic_gen"].stop()
-    simulation_state["monitor"].stop()
+    if simulation_state["traffic_gen"]:
+        simulation_state["traffic_gen"].stop()
+    if simulation_state["monitor"]:
+        simulation_state["monitor"].stop()
+        
     simulation_state["is_running"] = False
     
+    save_action_log("network_logs.db", "SYSTEM", "Simulation stopped by administrator.")
     return {"status": "success", "message": "Simulation stopped"}
 
 @app.get("/api/metrics")
 def get_metrics():
-    if not simulation_state["is_running"] or not simulation_state["monitor"].metrics_history:
-        return {"status": "idle", "data": None}
+    if not simulation_state["is_running"] or not simulation_state["monitor"] or not simulation_state["monitor"].metrics_history:
+        return {
+            "status": "idle",
+            "data": None,
+            "history": [],
+            "logs": get_action_logs("network_logs.db", limit=25),
+            "strategy": simulation_state["strategy"],
+            "custom_static": simulation_state["custom_static"],
+            "ml_info": simulation_state["ml_engine"].training_info
+        }
         
-    # Get the latest snapshot
     latest = simulation_state["monitor"].metrics_history[-1]
-    
-    # Run the allocation engine based on the active strategy
     strategy = simulation_state["strategy"]
     engine = simulation_state["allocation_engine"]
     
@@ -83,4 +161,112 @@ def get_metrics():
         pred = simulation_state["ml_engine"].predict_demand(latest)
         engine.allocate_ai_assisted(pred)
         
-    return {"status": "active", "data": latest, "strategy": strategy}
+    # Return time-series history for charts (last 60 ticks)
+    history = simulation_state["monitor"].metrics_history[-60:]
+    action_logs = get_action_logs("network_logs.db", limit=30)
+    
+    # Current active bandwidth allocation map
+    allocations = {k: s.allocated_bandwidth for k, s in simulation_state["slices"].items()}
+        
+    return {
+        "status": "active",
+        "data": latest,
+        "history": history,
+        "allocations": allocations,
+        "strategy": strategy,
+        "logs": action_logs,
+        "ml_info": simulation_state["ml_engine"].training_info
+    }
+
+@app.get("/api/history")
+def get_history(limit: int = Query(60, ge=1, le=500), slice_name: Optional[str] = None):
+    """
+    Returns historical snapshots from SQLite database for reporting & analytics.
+    """
+    records = get_recent_history("network_logs.db", limit=limit, slice_name=slice_name)
+    return {"status": "success", "count": len(records), "data": records}
+
+@app.get("/api/analytics/summary")
+def get_summary():
+    """
+    Returns overall QoS and slice statistics aggregated from SQLite network_logs.
+    """
+    summary = get_analytics_summary("network_logs.db")
+    return {"status": "success", "summary": summary}
+
+@app.post("/api/simulate_spike")
+def simulate_spike(payload: SpikePayload):
+    if not simulation_state["is_running"]:
+        return {"status": "error", "message": "Simulation is not currently running"}
+    
+    tg = simulation_state["traffic_gen"]
+    if tg and payload.slice_name in tg.traffic_profiles:
+        current = tg.traffic_profiles[payload.slice_name]
+        new_val = current * payload.multiplier
+        tg.update_profile(payload.slice_name, new_val)
+        return {
+            "status": "success",
+            "message": f"Spiked traffic on {payload.slice_name} to {new_val / 1_000_000:.1f} Mbps",
+            "new_profile_mbps": new_val / 1_000_000
+        }
+    return {"status": "error", "message": "Slice not found"}
+
+@app.post("/api/simulate_scenario")
+def simulate_scenario(payload: ScenarioPayload):
+    if not simulation_state["is_running"]:
+        return {"status": "error", "message": "Simulation is not currently running"}
+        
+    tg = simulation_state["traffic_gen"]
+    if tg:
+        profiles = tg.apply_scenario(payload.scenario)
+        return {
+            "status": "success",
+            "scenario": payload.scenario,
+            "profiles_mbps": {k: v / 1_000_000 for k, v in profiles.items()}
+        }
+    return {"status": "error", "message": "Traffic generator not active"}
+
+@app.post("/api/slices/configure_static")
+def configure_static_allocation(payload: StaticAllocationPayload):
+    alloc_dict = {
+        "low_latency": payload.low_latency,
+        "high_bandwidth": payload.high_bandwidth,
+        "general": payload.general
+    }
+    simulation_state["custom_static"] = alloc_dict
+    
+    if simulation_state["is_running"] and simulation_state["allocation_engine"]:
+        success, msg = simulation_state["allocation_engine"].set_custom_static_config(alloc_dict)
+        return {
+            "status": "success" if success else "error",
+            "message": msg,
+            "allocations": simulation_state["allocation_engine"].custom_static_config
+        }
+    return {
+        "status": "success",
+        "message": "Custom static allocations saved for next run.",
+        "allocations": alloc_dict
+    }
+
+@app.post("/api/train")
+def train_model():
+    """
+    Retrains the AI Decision Tree models directly on stored SQLite network analytics.
+    """
+    ml_engine = simulation_state["ml_engine"]
+    result = ml_engine.train_from_db()
+    return result
+
+@app.get("/api/logs")
+def get_logs(limit: int = 50):
+    logs = get_action_logs("network_logs.db", limit=limit)
+    return {"status": "success", "logs": logs}
+
+@app.post("/api/chat")
+def chat_with_bot(payload: ChatPayload):
+    reply = generate_ai_response(
+        payload.message,
+        simulation_state=simulation_state,
+        db_path="network_logs.db"
+    )
+    return {"reply": reply}

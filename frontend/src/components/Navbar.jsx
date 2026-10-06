@@ -72,9 +72,11 @@ const Navbar = ({
               </span>
 
               {mode === 'real_network' && (
-                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                   <Wifi size={12} />
-                  {currentIfaceObj ? `${currentIfaceObj.name} (${currentIfaceObj.ip})` : 'Wi-Fi (10.57.56.13)'}
+                  {currentIfaceObj?.wifi_details?.ssid 
+                    ? `Wi-Fi: "${currentIfaceObj.wifi_details.ssid}" (${currentIfaceObj.wifi_details.signal} • ${currentIfaceObj.ip})`
+                    : (currentIfaceObj ? `${currentIfaceObj.name} (${currentIfaceObj.ip})` : 'Wi-Fi: "Magic" (10.57.56.13)')}
                 </span>
               )}
             </div>

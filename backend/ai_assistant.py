@@ -152,11 +152,53 @@ Current System State:
     # Intelligent contextual local reasoning engine
     msg = user_message.strip().lower()
 
-    if not simulation_state.get("is_running", False):
+    # 1. Polite greetings & conversational queries (e.g. "hi", "how are you", "who are you")
+    is_greeting = any(g in msg for g in ["hi", "hello", "hey", "good morning", "good evening", "good afternoon"])
+    is_how_are_you = any(h in msg for h in ["how are you", "how r u", "how do you do", "how's it going"])
+    is_identity = any(i in msg for i in ["who are you", "what are you", "what can you do", "what do you do", "help", "what is this"])
+
+    if is_how_are_you:
+        run_status = "actively monitoring live traffic" if simulation_state.get("is_running", False) else "currently paused and on standby"
         return (
-            "Hi! Network monitoring is currently **paused**.\n\n"
-            f"Click **Start Monitoring** above to view live traffic metrics. "
-            f"Your database currently holds **{summary_stats.get('total_records', 0)} snapshots** of previous traffic runs."
+            "👋 **Hello! I'm doing great, thanks for asking!**\n\n"
+            f"I am your **NetSlice Network Assistant**. Right now, I am {run_status} on your 100 Mbps bandwidth pool.\n\n"
+            "**Here is how I can help you:**\n"
+            "- 📊 **Check Performance:** Ask me *'How is the network doing?'* or *'How is my Wi-Fi?'*\n"
+            "- ⚠️ **Diagnose Drops:** Ask me *'Why are packets dropping?'* or *'Is there packet loss?'*\n"
+            "- ⚡ **Analyze Latency:** Ask me *'What is the latency on gaming?'* or *'Is gaming lagging?'*\n"
+            "- 🎛️ **Bandwidth Advice:** Ask me *'What bandwidth split do you recommend?'*\n"
+            "- 🤖 **Machine Learning:** Ask me *'What is the status of the ML model?'*\n\n"
+            "Feel free to ask any question about your network performance at any time!"
+        )
+
+    if is_greeting or is_identity:
+        run_status = "live monitoring is running" if simulation_state.get("is_running", False) else "monitoring is paused (click 'Start Monitoring' above)"
+        return (
+            "👋 **Hi there! I am your NetSlice AI Network Assistant.**\n\n"
+            "I'm specialized in real-time bandwidth management, 5G/6G network slicing, and QoS performance audits.\n\n"
+            f"**Current Status:** {run_status}.\n\n"
+            "**What you can ask me anytime:**\n"
+            "1. **'How is my connection doing?'** — I'll inspect active throughput and load across all slices.\n"
+            "2. **'Why are packets dropping?'** — I'll identify congested slices and suggest fixes.\n"
+            "3. **'Check latency'** — I'll verify if voice/gaming latency meets your sub-15ms SLA target.\n"
+            "4. **'Recommend allocations'** — I'll give exact Mbps slider suggestions.\n"
+            "5. **'ML model status'** — I'll report on decision tree training and database history."
+        )
+
+    if not simulation_state.get("is_running", False):
+        if any(k in msg for k in ["history", "database", "past", "record", "sample", "snapshot", "summary"]):
+            return (
+                f"**Database Archive Summary:**\n\n"
+                f"- **Total Stored Snapshots:** `{summary_stats.get('total_records', 0)}` records in SQLite (`network_logs.db`)\n"
+                f"- **Total Packets Logged:** `{summary_stats.get('total_packets_processed', 0):,}` pkts\n"
+                f"- **Overall Dropped Packets:** `{summary_stats.get('total_packets_dropped', 0)}`\n"
+                f"- **QoS Violations:** `{summary_stats.get('qos_violations', 0)}`\n\n"
+                "Click **History** in the header to inspect individual records, or click **Start Monitoring** to begin streaming live traffic."
+            )
+        return (
+            "Network monitoring is currently **paused**.\n\n"
+            f"Click **Start Monitoring** in the top header to begin streaming live telemetry. "
+            f"You can also ask about **database history** ({summary_stats.get('total_records', 0)} recorded snapshots) or ask general questions about how network slicing works."
         )
 
     # Specific query matching

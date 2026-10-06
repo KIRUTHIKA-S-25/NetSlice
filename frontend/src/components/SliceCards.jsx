@@ -77,8 +77,8 @@ const SliceCards = ({ metrics, allocations }) => {
                   width: '36px',
                   height: '36px',
                   borderRadius: '8px',
-                  backgroundColor: '#161f33',
-                  border: '1px solid #1f2937',
+                  backgroundColor: 'var(--bg-card-subtle)',
+                  border: '1px solid var(--border-card)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -87,7 +87,7 @@ const SliceCards = ({ metrics, allocations }) => {
                   <Icon size={18} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                     {config.title}
                   </h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -119,11 +119,11 @@ const SliceCards = ({ metrics, allocations }) => {
             </div>
 
             {/* Throughput & Capacity Bar */}
-            <div style={{ marginBottom: '14px', backgroundColor: '#0c101c', padding: '12px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+            <div style={{ marginBottom: '14px', backgroundColor: 'var(--bg-card-subtle)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Current Throughput</span>
                 <div>
-                  <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                     {throughput.toFixed(1)}
                   </span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '3px' }}>
@@ -132,7 +132,7 @@ const SliceCards = ({ metrics, allocations }) => {
                 </div>
               </div>
 
-              <div style={{ width: '100%', height: '6px', backgroundColor: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--border-card)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div 
                   style={{ 
                     width: `${Math.min(100, utilization)}%`, 
@@ -148,29 +148,29 @@ const SliceCards = ({ metrics, allocations }) => {
             {/* Metrics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               
-              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+              <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Utilization</div>
                 <div style={{ 
                   fontSize: '0.95rem', 
                   fontWeight: '600', 
-                  color: utilization > 90 ? 'var(--status-danger)' : utilization > 75 ? 'var(--status-warning)' : 'inherit'
+                  color: utilization > 90 ? 'var(--status-danger)' : utilization > 75 ? 'var(--status-warning)' : 'var(--text-primary)'
                 }}>
                   {utilization.toFixed(0)}%
                 </div>
               </div>
 
-              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+              <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Latency</div>
                 <div style={{ 
                   fontSize: '0.95rem', 
                   fontWeight: '600',
-                  color: hasLatencySpike ? 'var(--status-danger)' : 'inherit'
+                  color: hasLatencySpike ? 'var(--status-danger)' : 'var(--text-primary)'
                 }}>
                   {latencyMs.toFixed(1)} ms
                 </div>
               </div>
 
-              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+              <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Drops</div>
                 <div style={{ 
                   fontSize: '0.95rem', 

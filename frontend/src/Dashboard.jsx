@@ -23,7 +23,10 @@ const Dashboard = () => {
   const [mode, setMode] = useState('real_network');
   const [activeInterface, setActiveInterface] = useState('Wi-Fi');
   const [interfaces, setInterfaces] = useState([]);
-  const [theme, setTheme] = useState(() => localStorage.getItem('netslice-theme') || 'slate');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('netslice-theme');
+    return (saved === 'slate' || !saved) ? 'white' : saved;
+  });
   const [strategy, setStrategy] = useState('static');
   const [mlInfo, setMlInfo] = useState(null);
   const [isRetraining, setIsRetraining] = useState(false);

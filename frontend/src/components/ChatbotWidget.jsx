@@ -107,21 +107,21 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
             zIndex: 900,
             padding: '10px 16px',
             borderRadius: '9999px',
-            backgroundColor: '#1e293b',
-            border: '1px solid #334155',
-            color: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            color: 'var(--text-primary)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+            boxShadow: 'var(--card-shadow)',
             transition: 'background-color 0.15s ease, transform 0.15s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1e293b'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}
           title="Open Network Assistant"
         >
-          <MessageSquare size={17} color="#38bdf8" />
+          <MessageSquare size={17} color="var(--slice-low-latency)" />
           <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Network Assistant</span>
           <span style={{
             width: '8px',
@@ -146,16 +146,16 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
             zIndex: 950,
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6)',
-            border: '1px solid #374151',
+            boxShadow: 'var(--card-shadow)',
+            border: '1px solid var(--border-card)',
             overflow: 'hidden',
-            backgroundColor: '#111827'
+            backgroundColor: 'var(--bg-card)'
           }}
         >
           {/* Header */}
           <div style={{
             padding: '12px 16px',
-            backgroundColor: '#161f33',
+            backgroundColor: 'var(--bg-card-subtle)',
             borderBottom: '1px solid var(--border-card)',
             display: 'flex',
             alignItems: 'center',
@@ -166,16 +166,17 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
                 width: '30px',
                 height: '30px',
                 borderRadius: '6px',
-                backgroundColor: '#1e293b',
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-card)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#38bdf8'
+                color: 'var(--slice-low-latency)'
               }}>
                 <MessageSquare size={16} />
               </div>
               <div>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#ffffff' }}>Network Assistant</h4>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Network Assistant</h4>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                   Connected to active telemetry
                 </div>
@@ -201,7 +202,7 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
-              backgroundColor: '#0b0f19'
+              backgroundColor: 'var(--bg-card-subtle)'
             }}
           >
             {messages.map((m, idx) => (
@@ -215,11 +216,12 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
                 <div style={{
                   padding: '9px 12px',
                   borderRadius: m.sender === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                  backgroundColor: m.sender === 'user' ? 'var(--accent-primary)' : '#161f33',
-                  border: m.sender === 'user' ? 'none' : '1px solid #1f2937',
-                  color: '#ffffff',
+                  backgroundColor: m.sender === 'user' ? 'var(--accent-primary)' : 'var(--bg-card)',
+                  border: m.sender === 'user' ? 'none' : '1px solid var(--border-card)',
+                  color: m.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
                   fontSize: '0.82rem',
-                  lineHeight: '1.45'
+                  lineHeight: '1.45',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                 }}>
                   {renderFormattedText(m.text)}
                 </div>
@@ -236,7 +238,7 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
             ))}
 
             {isTyping && (
-              <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: '#161f33', borderRadius: '8px', fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+              <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: '8px', fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                 <span>Analyzing network state...</span>
               </div>
             )}
@@ -245,7 +247,7 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
           {/* Quick Questions */}
           <div style={{
             padding: '6px 10px',
-            backgroundColor: '#111827',
+            backgroundColor: 'var(--bg-card-subtle)',
             borderTop: '1px solid var(--border-card)',
             overflowX: 'auto',
             display: 'flex',
@@ -257,23 +259,23 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
                 key={i}
                 onClick={() => handleSendMessage(chip)}
                 style={{
-                  backgroundColor: '#161f33',
-                  border: '1px solid #1f2937',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-card)',
                   borderRadius: '12px',
                   padding: '3px 9px',
                   color: 'var(--text-secondary)',
                   fontSize: '0.72rem',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  transition: 'color 0.15s ease'
+                  transition: 'all 0.15s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.borderColor = '#374151';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.borderColor = 'var(--border-muted)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.borderColor = '#1f2937';
+                  e.currentTarget.style.borderColor = 'var(--border-card)';
                 }}
               >
                 {chip}
@@ -284,7 +286,7 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
           {/* Chat Input */}
           <div style={{
             padding: '10px 12px',
-            backgroundColor: '#111827',
+            backgroundColor: 'var(--bg-card-subtle)',
             borderTop: '1px solid var(--border-card)',
             display: 'flex',
             gap: '8px',
@@ -300,11 +302,11 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
               }}
               style={{
                 flex: 1,
-                backgroundColor: '#0b0f19',
+                backgroundColor: 'var(--bg-card)',
                 border: '1px solid var(--border-card)',
                 borderRadius: '6px',
                 padding: '7px 10px',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 fontSize: '0.8rem',
                 outline: 'none'
               }}

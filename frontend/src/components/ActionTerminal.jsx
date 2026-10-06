@@ -43,7 +43,7 @@ const ActionTerminal = ({ logs = [] }) => {
       
       {/* Header Bar */}
       <div style={{
-        backgroundColor: '#111827',
+        backgroundColor: 'var(--bg-card-subtle)',
         borderBottom: '1px solid var(--border-card)',
         padding: '12px 18px',
         display: 'flex',
@@ -54,7 +54,7 @@ const ActionTerminal = ({ logs = [] }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Activity size={16} color="var(--slice-low-latency)" />
-          <h3 style={{ fontSize: '0.92rem', fontWeight: '600', color: '#ffffff' }}>
+          <h3 style={{ fontSize: '0.92rem', fontWeight: '600', color: 'var(--text-primary)' }}>
             Activity & System Events
           </h3>
           <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
@@ -72,8 +72,8 @@ const ActionTerminal = ({ logs = [] }) => {
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
               style={{
-                backgroundColor: '#161f33',
-                color: '#ffffff',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-primary)',
                 border: '1px solid var(--border-card)',
                 borderRadius: '6px',
                 padding: '3px 8px',
@@ -121,7 +121,7 @@ const ActionTerminal = ({ logs = [] }) => {
       <div
         ref={scrollRef}
         style={{
-          backgroundColor: '#0a0d16',
+          backgroundColor: 'var(--bg-card)',
           height: '210px',
           overflowY: 'auto',
           padding: '12px 18px',
@@ -144,11 +144,11 @@ const ActionTerminal = ({ logs = [] }) => {
                   alignItems: 'baseline',
                   gap: '10px',
                   padding: '5px 0',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.03)'
+                  borderBottom: '1px solid var(--border-card)'
                 }}
               >
                 {/* Time */}
-                <span className="terminal-font" style={{ color: '#64748b', fontSize: '0.74rem', flexShrink: 0 }}>
+                <span className="terminal-font" style={{ color: 'var(--text-muted)', fontSize: '0.74rem', flexShrink: 0 }}>
                   {log.datetime_str || new Date(log.timestamp * 1000).toLocaleTimeString()}
                 </span>
 
@@ -171,7 +171,7 @@ const ActionTerminal = ({ logs = [] }) => {
                 </span>
 
                 {/* Message */}
-                <span style={{ color: '#e2e8f0', wordBreak: 'break-word', fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-word', fontSize: '0.8rem' }}>
                   {log.message}
                 </span>
               </div>

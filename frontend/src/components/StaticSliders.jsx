@@ -74,7 +74,7 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
     <div className="glass-card" style={{ padding: '18px 22px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: 'var(--text-primary)' }}>
             Bandwidth Allocation
           </h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -122,7 +122,7 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
           borderRadius: '6px',
           backgroundColor: 'var(--status-info-bg)',
           border: '1px solid rgba(2, 132, 199, 0.3)',
-          color: '#38bdf8',
+          color: 'var(--status-info)',
           fontSize: '0.8rem',
           marginBottom: '12px'
         }}>
@@ -134,10 +134,10 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
         
         {/* Low-Latency */}
-        <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+        <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: '500', color: 'var(--slice-low-latency)' }}>Calls & Gaming</span>
-            <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>{allocations.low_latency} Mbps</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>{allocations.low_latency} Mbps</span>
           </div>
           <input
             type="range"
@@ -151,10 +151,10 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
         </div>
 
         {/* High-Bandwidth */}
-        <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+        <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: '500', color: 'var(--slice-high-bandwidth)' }}>Streaming & Video</span>
-            <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>{allocations.high_bandwidth} Mbps</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>{allocations.high_bandwidth} Mbps</span>
           </div>
           <input
             type="range"
@@ -168,10 +168,10 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
         </div>
 
         {/* General */}
-        <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+        <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: '500', color: 'var(--slice-general)' }}>General Web & Sync</span>
-            <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>{allocations.general} Mbps</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>{allocations.general} Mbps</span>
           </div>
           <input
             type="range"

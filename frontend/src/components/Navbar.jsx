@@ -41,19 +41,19 @@ const Navbar = ({
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            backgroundColor: '#1e293b',
-            border: '1px solid #334155',
+            backgroundColor: 'var(--bg-card-subtle)',
+            border: '1px solid var(--border-card)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#38bdf8'
+            color: 'var(--accent-primary)'
           }}>
             <Sliders size={20} />
           </div>
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.02em', color: '#ffffff' }}>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                 NetSlice
               </h1>
               <span className={`badge ${isRunning ? 'badge-emerald' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -91,7 +91,7 @@ const Navbar = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           
           {/* Operational Mode */}
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#161f33', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-subtle)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
             <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Source:</span>
             <select
               value={mode}
@@ -99,7 +99,7 @@ const Navbar = ({
               disabled={isRunning}
               style={{
                 background: 'transparent',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 border: 'none',
                 outline: 'none',
                 fontSize: '0.8rem',
@@ -107,13 +107,13 @@ const Navbar = ({
                 cursor: isRunning ? 'not-allowed' : 'pointer'
               }}
             >
-              <option value="real_network" style={{ background: '#111827', color: '#ffffff' }}>Live Network (Wi-Fi)</option>
-              <option value="simulation" style={{ background: '#111827', color: '#ffffff' }}>Simulation Sandbox</option>
+              <option value="real_network" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Live Network (Wi-Fi)</option>
+              <option value="simulation" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Simulation Sandbox</option>
             </select>
           </div>
 
           {/* Allocation Strategy */}
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#161f33', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-subtle)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
             <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Balancing:</span>
             <select
               value={strategy}
@@ -121,7 +121,7 @@ const Navbar = ({
               disabled={isRunning}
               style={{
                 background: 'transparent',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 border: 'none',
                 outline: 'none',
                 fontSize: '0.8rem',
@@ -151,10 +151,10 @@ const Navbar = ({
                 cursor: 'pointer'
               }}
             >
+              <option value="white" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Clean White (Porcelain)</option>
+              <option value="warm" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Warm White (Alabaster)</option>
               <option value="slate" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Midnight Slate</option>
               <option value="charcoal" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Charcoal Zinc</option>
-              <option value="ocean" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Ocean Navy</option>
-              <option value="light" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Executive Light</option>
             </select>
           </div>
 

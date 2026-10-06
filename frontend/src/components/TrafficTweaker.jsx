@@ -73,7 +73,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
     <div className="glass-card" style={{ padding: '18px 22px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: 'var(--text-primary)' }}>
             Traffic Load Testing
           </h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -87,7 +87,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
             borderRadius: '6px',
             backgroundColor: 'var(--status-info-bg)',
             border: '1px solid rgba(2, 132, 199, 0.3)',
-            color: '#38bdf8',
+            color: 'var(--status-info)',
             fontSize: '0.76rem',
             fontWeight: '500'
           }}>
@@ -110,7 +110,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
             flexDirection: 'column',
             gap: '4px',
             borderColor: activeScenario === 'streaming_burst' ? 'var(--slice-high-bandwidth)' : undefined,
-            backgroundColor: activeScenario === 'streaming_burst' ? '#1c1a2e' : undefined
+            backgroundColor: activeScenario === 'streaming_burst' ? 'rgba(124, 58, 237, 0.1)' : undefined
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--slice-high-bandwidth)' }}>
@@ -133,7 +133,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
             flexDirection: 'column',
             gap: '4px',
             borderColor: activeScenario === 'fleet_surge' ? 'var(--slice-low-latency)' : undefined,
-            backgroundColor: activeScenario === 'fleet_surge' ? '#122338' : undefined
+            backgroundColor: activeScenario === 'fleet_surge' ? 'var(--status-info-bg)' : undefined
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--slice-low-latency)' }}>
@@ -156,10 +156,10 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
             flexDirection: 'column',
             gap: '4px',
             borderColor: activeScenario === 'dos_attack' ? '#f87171' : undefined,
-            backgroundColor: activeScenario === 'dos_attack' ? '#291418' : undefined
+            backgroundColor: activeScenario === 'dos_attack' ? 'var(--status-danger-bg)' : undefined
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: '#f87171' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--status-danger)' }}>
             <Globe size={16} />
             <span style={{ fontWeight: '600', fontSize: '0.82rem' }}>Heavy Download Spike (70M)</span>
           </div>
@@ -179,7 +179,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
             flexDirection: 'column',
             gap: '4px',
             borderColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'var(--status-success)' : undefined,
-            backgroundColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'rgba(16, 185, 129, 0.08)' : undefined
+            backgroundColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'var(--status-success-bg)' : undefined
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--status-success)' }}>
@@ -198,10 +198,10 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        backgroundColor: '#0c101c',
+        backgroundColor: 'var(--bg-card-subtle)',
         padding: '10px 14px',
         borderRadius: '8px',
-        border: '1px solid #1e2638',
+        border: '1px solid var(--border-card)',
         flexWrap: 'wrap'
       }}>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -212,8 +212,8 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
           value={selectedSlice}
           onChange={(e) => setSelectedSlice(e.target.value)}
           style={{
-            backgroundColor: '#161f33',
-            color: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-primary)',
             border: '1px solid var(--border-card)',
             padding: '5px 10px',
             borderRadius: '6px',
@@ -235,7 +235,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
                 padding: '4px 8px',
                 fontSize: '0.74rem',
                 borderColor: multiplier === m ? 'var(--accent-primary)' : undefined,
-                backgroundColor: multiplier === m ? '#1e293b' : undefined
+                backgroundColor: multiplier === m ? 'var(--bg-hover)' : undefined
               }}
             >
               {m}x

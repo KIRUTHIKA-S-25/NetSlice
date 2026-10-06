@@ -22,11 +22,11 @@ const CustomTooltip = ({ active, payload, label, metricType }) => {
 
     return (
       <div style={{
-        backgroundColor: '#111827',
-        border: '1px solid #374151',
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--border-card)',
         borderRadius: '6px',
         padding: '8px 12px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+        boxShadow: 'var(--card-shadow)',
         fontSize: '0.78rem'
       }}>
         <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
@@ -35,7 +35,7 @@ const CustomTooltip = ({ active, payload, label, metricType }) => {
         {payload.map((entry, idx) => (
           <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', margin: '2px 0' }}>
             <span style={{ color: entry.color, fontWeight: '500' }}>{entry.name}:</span>
-            <span style={{ fontWeight: '600', color: '#ffffff' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
               {entry.value} {unit}
             </span>
           </div>
@@ -79,7 +79,7 @@ const MetricsCharts = ({ history }) => {
     <div className="glass-card" style={{ padding: '18px 22px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: 'var(--text-primary)' }}>
             Live Traffic Graphs
           </h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -88,7 +88,7 @@ const MetricsCharts = ({ history }) => {
         </div>
 
         {/* Metric Selector Tabs */}
-        <div style={{ display: 'flex', gap: '4px', backgroundColor: '#0c101c', padding: '3px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+        <div style={{ display: 'flex', gap: '4px', backgroundColor: 'var(--bg-card-subtle)', padding: '3px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
           <button
             className="btn-secondary"
             onClick={() => setMetricType('throughput')}
@@ -96,8 +96,8 @@ const MetricsCharts = ({ history }) => {
               padding: '4px 10px',
               fontSize: '0.76rem',
               border: 'none',
-              backgroundColor: metricType === 'throughput' ? '#1e293b' : 'transparent',
-              color: metricType === 'throughput' ? '#ffffff' : 'var(--text-secondary)'
+              backgroundColor: metricType === 'throughput' ? 'var(--bg-hover)' : 'transparent',
+              color: metricType === 'throughput' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
             Throughput (Mbps)
@@ -109,8 +109,8 @@ const MetricsCharts = ({ history }) => {
               padding: '4px 10px',
               fontSize: '0.76rem',
               border: 'none',
-              backgroundColor: metricType === 'latency' ? '#1e293b' : 'transparent',
-              color: metricType === 'latency' ? '#ffffff' : 'var(--text-secondary)'
+              backgroundColor: metricType === 'latency' ? 'var(--bg-hover)' : 'transparent',
+              color: metricType === 'latency' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
             Latency (ms)
@@ -122,8 +122,8 @@ const MetricsCharts = ({ history }) => {
               padding: '4px 10px',
               fontSize: '0.76rem',
               border: 'none',
-              backgroundColor: metricType === 'utilization' ? '#1e293b' : 'transparent',
-              color: metricType === 'utilization' ? '#ffffff' : 'var(--text-secondary)'
+              backgroundColor: metricType === 'utilization' ? 'var(--bg-hover)' : 'transparent',
+              color: metricType === 'utilization' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
             Utilization (%)
@@ -135,8 +135,8 @@ const MetricsCharts = ({ history }) => {
               padding: '4px 10px',
               fontSize: '0.76rem',
               border: 'none',
-              backgroundColor: metricType === 'drops' ? '#1e293b' : 'transparent',
-              color: metricType === 'drops' ? '#ffffff' : 'var(--text-secondary)'
+              backgroundColor: metricType === 'drops' ? 'var(--bg-hover)' : 'transparent',
+              color: metricType === 'drops' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
             Packet Drops
@@ -152,15 +152,15 @@ const MetricsCharts = ({ history }) => {
         <div style={{ width: '100%', height: '290px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-card)" vertical={false} />
               <XAxis 
                 dataKey="timeLabel" 
-                stroke="#6b7280" 
+                stroke="var(--text-muted)" 
                 tick={{ fontSize: 11 }} 
                 minTickGap={25}
               />
               <YAxis 
-                stroke="#6b7280" 
+                stroke="var(--text-muted)" 
                 tick={{ fontSize: 11 }}
                 domain={metricType === 'utilization' ? [0, 105] : ['auto', 'auto']}
               />

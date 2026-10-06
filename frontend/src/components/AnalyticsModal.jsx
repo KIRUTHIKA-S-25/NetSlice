@@ -69,9 +69,9 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
           maxHeight: '88vh',
           overflowY: 'auto',
           padding: '24px',
-          backgroundColor: '#111827',
-          border: '1px solid #374151',
-          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6)'
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.15)'
         }}
       >
         {/* Header */}
@@ -81,7 +81,8 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
               width: '36px',
               height: '36px',
               borderRadius: '8px',
-              backgroundColor: '#161f33',
+              backgroundColor: 'var(--bg-card-subtle)',
+              border: '1px solid var(--border-card)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -90,7 +91,7 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
               <Database size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#ffffff' }}>Network History & Recorded Metrics</h2>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)' }}>Network History & Recorded Metrics</h2>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                 Persistent historical traffic logs and QoS performance audits
               </p>
@@ -111,23 +112,23 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
         {summary && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             
-            <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+            <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '3px' }}>Recorded Snapshots</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {summary.total_records?.toLocaleString() || 0}
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+            <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '3px' }}>Packets Processed</div>
               <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--status-success)' }}>
                 {summary.total_packets_processed?.toLocaleString() || 0}
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+            <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '3px' }}>Dropped Packets</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: summary.total_packets_dropped > 0 ? 'var(--status-danger)' : '#ffffff' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: summary.total_packets_dropped > 0 ? 'var(--status-danger)' : 'var(--text-primary)' }}>
                 {summary.total_packets_dropped || 0}
                 <span style={{ fontSize: '0.74rem', fontWeight: '400', color: 'var(--text-muted)', marginLeft: '4px' }}>
                   ({summary.overall_drop_rate || 0}%)
@@ -135,7 +136,7 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#0c101c', padding: '12px 14px', borderRadius: '8px', border: '1px solid #1e2638' }}>
+            <div style={{ backgroundColor: 'var(--bg-card-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)' }}>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '3px' }}>SLA Alerts</div>
               <div style={{ fontSize: '1.25rem', fontWeight: '700', color: summary.qos_violations > 0 ? 'var(--status-warning)' : 'var(--status-success)' }}>
                 {summary.qos_violations || 0}
@@ -148,13 +149,13 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
         {/* Per-Slice Historical Breakdown */}
         {summary?.slice_stats && Object.keys(summary.slice_stats).length > 0 && (
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '0.88rem', fontWeight: '600', marginBottom: '10px', color: '#ffffff' }}>
+            <h3 style={{ fontSize: '0.88rem', fontWeight: '600', marginBottom: '10px', color: 'var(--text-primary)' }}>
               Per-Slice Average Performance
             </h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#161f33', color: 'var(--text-secondary)', textAlign: 'left' }}>
+                  <tr style={{ backgroundColor: 'var(--bg-card-subtle)', color: 'var(--text-secondary)', textAlign: 'left' }}>
                     <th style={{ padding: '8px 12px' }}>Slice</th>
                     <th style={{ padding: '8px 12px' }}>Avg Throughput</th>
                     <th style={{ padding: '8px 12px' }}>Avg Latency</th>
@@ -164,7 +165,7 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
                 </thead>
                 <tbody>
                   {Object.entries(summary.slice_stats).map(([sName, stat]) => (
-                    <tr key={sName} style={{ borderBottom: '1px solid #1e2638' }}>
+                    <tr key={sName} style={{ borderBottom: '1px solid var(--border-card)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: '500', textTransform: 'capitalize' }}>
                         {sName.replace('_', ' ')}
                       </td>
@@ -185,7 +186,7 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
         {/* Database Logs Explorer */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ fontSize: '0.88rem', fontWeight: '600', color: '#ffffff' }}>
+            <h3 style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>
               Recent Snapshots
             </h3>
 
@@ -195,8 +196,8 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
                 value={selectedSlice}
                 onChange={(e) => setSelectedSlice(e.target.value)}
                 style={{
-                  backgroundColor: '#161f33',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
                   border: '1px solid var(--border-card)',
                   borderRadius: '6px',
                   padding: '3px 8px',
@@ -211,10 +212,10 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
             </div>
           </div>
 
-          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #1e2638', borderRadius: '6px' }}>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-card)', borderRadius: '6px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-              <thead style={{ position: 'sticky', top: 0, backgroundColor: '#111827' }}>
-                <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid #1e2638' }}>
+              <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card-subtle)' }}>
+                <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid var(--border-card)' }}>
                   <th style={{ padding: '6px 10px' }}>Time</th>
                   <th style={{ padding: '6px 10px' }}>Slice</th>
                   <th style={{ padding: '6px 10px' }}>Throughput</th>
@@ -226,7 +227,7 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
               </thead>
               <tbody>
                 {historyLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--border-card)' }}>
                     <td style={{ padding: '5px 10px', color: 'var(--text-muted)' }}>{log.datetime_str}</td>
                     <td style={{ padding: '5px 10px', fontWeight: '500' }}>{log.slice_name}</td>
                     <td style={{ padding: '5px 10px' }}>{log.throughput_mbps} Mbps</td>

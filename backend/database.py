@@ -1,7 +1,10 @@
+import os
 import time
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, Text, desc
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+DEFAULT_DB_PATH = os.environ.get("DATABASE_PATH", "network_logs.db")
 
 Base = declarative_base()
 
@@ -57,22 +60,26 @@ class ActionLog(Base):
 _engine = None
 _SessionFactory = None
 
-def get_engine(db_path="network_logs.db"):
+def get_engine(db_path=None):
     global _engine, _SessionFactory
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     if _engine is None:
         _engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
         Base.metadata.create_all(_engine)
         _SessionFactory = sessionmaker(bind=_engine)
     return _engine
 
-def get_session(db_path="network_logs.db"):
+def get_session(db_path=None):
     get_engine(db_path)
     return _SessionFactory()
 
-def init_db(db_path="network_logs.db"):
+def init_db(db_path=None):
     return get_engine(db_path)
 
-def save_snapshot_logs(db_path, timestamp, slices_data, strategy="static"):
+def save_snapshot_logs(db_path=None, timestamp=None, slices_data=None, strategy="static"):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     session = get_session(db_path)
     dt_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
     logs = []
@@ -99,7 +106,9 @@ def save_snapshot_logs(db_path, timestamp, slices_data, strategy="static"):
     finally:
         session.close()
 
-def save_action_log(db_path, level, message):
+def save_action_log(db_path=None, level="INFO", message=""):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     session = get_session(db_path)
     ts = time.time()
     dt_str = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
@@ -118,7 +127,9 @@ def save_action_log(db_path, level, message):
     finally:
         session.close()
 
-def get_recent_history(db_path="network_logs.db", limit=60, slice_name=None):
+def get_recent_history(db_path=None, limit=60, slice_name=None):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     session = get_session(db_path)
     try:
         query = session.query(NetworkLog)
@@ -133,7 +144,9 @@ def get_recent_history(db_path="network_logs.db", limit=60, slice_name=None):
     finally:
         session.close()
 
-def get_action_logs(db_path="network_logs.db", limit=50):
+def get_action_logs(db_path=None, limit=50):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     session = get_session(db_path)
     try:
         records = session.query(ActionLog).order_by(desc(ActionLog.id)).limit(limit).all()
@@ -144,7 +157,9 @@ def get_action_logs(db_path="network_logs.db", limit=50):
     finally:
         session.close()
 
-def get_analytics_summary(db_path="network_logs.db"):
+def get_analytics_summary(db_path=None):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
     session = get_session(db_path)
     try:
         logs = session.query(NetworkLog).all()

@@ -7,6 +7,7 @@ import {
   HelpCircle,
   Wifi
 } from 'lucide-react';
+import { API_BASE } from '../config';
 
 const promptChips = [
   "How is my Wi-Fi performing?",
@@ -49,7 +50,7 @@ const ChatbotWidget = ({ isRunning, strategy, metrics }) => {
     setIsTyping(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })

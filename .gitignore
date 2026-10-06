@@ -1,18 +1,43 @@
+# Environment variables & secrets
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
-.env
-.DS_Store
+.venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Node
 node_modules/
 dist/
+dist-ssr/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Database
+# Database & SQLite files
 *.sqlite3
 *.db
+*.sqlite
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

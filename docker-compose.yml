@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: netslice_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "9101:9101/udp"
+      - "9102:9102/udp"
+      - "9103:9103/udp"
+      - "9105:9105/tcp"
+      - "9999:9999/udp"
+    environment:
+      - DATABASE_PATH=/app/data/network_logs.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      # Persist SQLite logs across container restarts
+      - backend_data:/app/data
+    networks:
+      - netslice_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+    container_name: netslice_frontend
+    restart: unless-stopped
+    ports:
+      # Map to both 5173 (standard Vite dev port) and 80 (standard HTTP port)
+      - "5173:80"
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - netslice_network
+
+networks:
+  netslice_network:
+    driver: bridge
+
+volumes:
+  backend_data:

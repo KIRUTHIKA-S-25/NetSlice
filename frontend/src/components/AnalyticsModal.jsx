@@ -7,6 +7,7 @@ import {
   Activity, 
   CheckCircle2 
 } from 'lucide-react';
+import { API_BASE } from '../config';
 
 const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
   const [summary, setSummary] = useState(null);
@@ -17,15 +18,15 @@ const AnalyticsModal = ({ isOpen, onClose, onRetrain, isRetraining }) => {
   const fetchAnalyticsData = async () => {
     setIsLoading(true);
     try {
-      const sumRes = await fetch('http://localhost:8000/api/analytics/summary');
+      const sumRes = await fetch(`${API_BASE}/api/analytics/summary`);
       const sumData = await sumRes.json();
       if (sumData.status === 'success') {
         setSummary(sumData.summary);
       }
 
       const url = selectedSlice === 'ALL' 
-        ? 'http://localhost:8000/api/history?limit=30' 
-        : `http://localhost:8000/api/history?limit=30&slice_name=${selectedSlice}`;
+        ? `${API_BASE}/api/history?limit=30` 
+        : `${API_BASE}/api/history?limit=30&slice_name=${selectedSlice}`;
       const histRes = await fetch(url);
       const histData = await histRes.json();
       if (histData.status === 'success') {

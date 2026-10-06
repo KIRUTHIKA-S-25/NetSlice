@@ -190,6 +190,8 @@ class RealNetworkManager:
 
         # Sockets
         self.udp_sock = None
+        self.tcp_server_sock = None
+        self.tcp_listener_thread = None
         self._init_sockets()
 
     def _init_sockets(self):
@@ -197,7 +199,34 @@ class RealNetworkManager:
             self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         except Exception as e:
-            print("Socket init note:", e)
+            print("UDP Socket init note:", e)
+
+        try:
+            self.tcp_server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.tcp_server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.tcp_server_sock.bind(("0.0.0.0", 9105))
+            self.tcp_server_sock.listen(5)
+            self.tcp_listener_thread = threading.Thread(target=self._tcp_server_loop, daemon=True)
+            self.tcp_listener_thread.start()
+        except Exception as e:
+            print("TCP Socket init note:", e)
+
+    def _tcp_server_loop(self):
+        while self.is_running and self.tcp_server_sock:
+            try:
+                conn, addr = self.tcp_server_sock.accept()
+                threading.Thread(target=self._handle_tcp_client, args=(conn, addr), daemon=True).start()
+            except Exception:
+                break
+
+    def _handle_tcp_client(self, conn, addr):
+        with conn:
+            try:
+                data = conn.recv(1024)
+                if data:
+                    conn.sendall(b"TCP_ACK:" + data[:16])
+            except Exception:
+                pass
 
     def set_interface(self, iface_name: str):
         self.interface_name = iface_name

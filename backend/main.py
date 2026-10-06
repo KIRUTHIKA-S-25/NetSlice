@@ -5,6 +5,7 @@ from typing import Optional, Dict
 
 # Database & Analytics Imports
 from database import (
+    DEFAULT_DB_PATH,
     init_db,
     save_action_log,
     get_recent_history,
@@ -24,7 +25,7 @@ from real_network import get_available_interfaces, RealNetworkManager
 app = FastAPI(title="AI-Assisted Network Slicing API", version="2.1")
 
 # Initialize database
-init_db("network_logs.db")
+init_db(DEFAULT_DB_PATH)
 
 # Configure CORS
 app.add_middleware(
@@ -46,7 +47,7 @@ simulation_state = {
     "monitor": None,
     "real_net_mgr": None,
     "allocation_engine": None,
-    "ml_engine": MLEngine(db_path="network_logs.db"),
+    "ml_engine": MLEngine(db_path=DEFAULT_DB_PATH),
     "custom_static": {
         "low_latency": 30.0,
         "high_bandwidth": 50.0,
@@ -82,11 +83,15 @@ class ChatPayload(BaseModel):
 @app.get("/api/status")
 def get_system_status():
     interfaces = get_available_interfaces()
+    current_iface = simulation_state["active_interface"]
+    if interfaces and not any(i["name"] == current_iface for i in interfaces):
+        current_iface = interfaces[0]["name"]
+        simulation_state["active_interface"] = current_iface
     return {
         "is_running": simulation_state["is_running"],
         "strategy": simulation_state["strategy"],
         "mode": simulation_state["mode"],
-        "active_interface": simulation_state["active_interface"],
+        "active_interface": current_iface,
         "detected_interfaces": interfaces,
         "ml_trained": simulation_state["ml_engine"].is_trained,
         "ml_info": simulation_state["ml_engine"].training_info,
@@ -346,11 +351,91 @@ def configure_static_allocation(payload: StaticAllocationPayload):
         "allocations": alloc_dict
     }
 
+# Networking Protocols & Multi-Model Imports
+from simulation.dhcp import dhcp_server
+from simulation.dns import dns_server
+from simulation.multicast import multicast_mgr
+
+class DHCPRequestPayload(BaseModel):
+    mac: str
+    slice_type: str
+
+class DNSResolvePayload(BaseModel):
+    domain: str
+
+class DNSAddRecordPayload(BaseModel):
+    domain: str
+    ip: str
+    port: int
+    slice_name: str
+
+class MulticastBroadcastPayload(BaseModel):
+    sender: str = "orchestrator"
+    event_type: str = "SLICE_REALLOCATION_SIGNAL"
+    message: str
+
+class MLModelSelectionPayload(BaseModel):
+    model_type: str # decision_tree, linear_regression, random_forest, gradient_boosting
+
 @app.post("/api/train")
 def train_model():
     ml_engine = simulation_state["ml_engine"]
     result = ml_engine.train_from_db()
     return result
+
+@app.post("/api/ml/model")
+def select_ml_model(payload: MLModelSelectionPayload):
+    ml_engine = simulation_state["ml_engine"]
+    res = ml_engine.set_model_type(payload.model_type)
+    return res
+
+@app.get("/api/ml/status")
+def get_ml_status():
+    ml_engine = simulation_state["ml_engine"]
+    return {
+        "active_model": ml_engine.selected_model_type,
+        "is_trained": ml_engine.is_trained,
+        "training_info": ml_engine.training_info,
+        "comparison": ml_engine.comparison_metrics
+    }
+
+# --- DHCP SIMULATION ENDPOINTS ---
+@app.get("/api/dhcp/leases")
+def get_dhcp_leases():
+    return {"status": "success", "leases": dhcp_server.get_active_leases()}
+
+@app.post("/api/dhcp/request")
+def request_dhcp_ip(payload: DHCPRequestPayload):
+    try:
+        lease = dhcp_server.request_ip(payload.mac, payload.slice_type)
+        return {"status": "success", "lease": lease}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# --- DNS SIMULATION ENDPOINTS ---
+@app.get("/api/dns/records")
+def get_dns_records():
+    return {"status": "success", "records": dns_server.get_records(), "history": dns_server.get_query_history()}
+
+@app.post("/api/dns/resolve")
+def resolve_dns_domain(payload: DNSResolvePayload):
+    result = dns_server.resolve(payload.domain)
+    return result
+
+@app.post("/api/dns/add")
+def add_dns_record(payload: DNSAddRecordPayload):
+    res = dns_server.add_record(payload.domain, payload.ip, payload.port, payload.slice_name)
+    return res
+
+# --- IPv4 MULTICAST ENDPOINTS ---
+@app.get("/api/multicast/status")
+def get_multicast_status():
+    return {"status": "success", "multicast": multicast_mgr.get_status()}
+
+@app.post("/api/multicast/broadcast")
+def broadcast_multicast_signal(payload: MulticastBroadcastPayload):
+    msg = multicast_mgr.broadcast_signal(payload.sender, payload.event_type, payload.message)
+    return {"status": "success", "broadcast": msg}
 
 @app.get("/api/logs")
 def get_logs(limit: int = 50):
@@ -365,3 +450,4 @@ def chat_with_bot(payload: ChatPayload):
         db_path="network_logs.db"
     )
     return {"reply": reply}
+

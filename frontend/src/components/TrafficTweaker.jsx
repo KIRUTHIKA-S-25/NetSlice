@@ -7,6 +7,7 @@ import {
   TrendingUp, 
   Activity 
 } from 'lucide-react';
+import { API_BASE } from '../config';
 
 const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
   const [selectedSlice, setSelectedSlice] = useState('high_bandwidth');
@@ -22,7 +23,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/simulate_scenario', {
+      const res = await fetch(`${API_BASE}/api/simulate_scenario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioName })
@@ -49,7 +50,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/simulate_spike', {
+      const res = await fetch(`${API_BASE}/api/simulate_spike`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

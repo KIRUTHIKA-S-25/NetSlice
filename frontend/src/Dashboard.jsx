@@ -6,9 +6,10 @@ import StaticSliders from './components/StaticSliders';
 import TrafficTweaker from './components/TrafficTweaker';
 import ActionTerminal from './components/ActionTerminal';
 import AnalyticsModal from './components/AnalyticsModal';
+import NetworkProtocolsModal from './components/NetworkProtocolsModal';
 import ChatbotWidget from './components/ChatbotWidget';
 
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from './config';
 
 const Dashboard = () => {
   const [metrics, setMetrics] = useState(null);
@@ -31,6 +32,7 @@ const Dashboard = () => {
   const [mlInfo, setMlInfo] = useState(null);
   const [isRetraining, setIsRetraining] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isProtocolsOpen, setIsProtocolsOpen] = useState(false);
   const [totalSnapshots, setTotalSnapshots] = useState(0);
   const [bannerAlert, setBannerAlert] = useState(null);
 
@@ -248,6 +250,7 @@ const Dashboard = () => {
         isRetraining={isRetraining}
         mlInfo={mlInfo}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+        onOpenProtocols={() => setIsProtocolsOpen(true)}
         totalSnapshots={totalSnapshots}
       />
 
@@ -327,6 +330,12 @@ const Dashboard = () => {
         onClose={() => setIsAnalyticsOpen(false)}
         onRetrain={handleRetrain}
         isRetraining={isRetraining}
+      />
+
+      {/* 6b. Advanced Protocols (DHCP, DNS, Multicast, ML) Modal */}
+      <NetworkProtocolsModal
+        isOpen={isProtocolsOpen}
+        onClose={() => setIsProtocolsOpen(false)}
       />
 
       {/* 7. Bottom-Right Integrated AI Assistant Bot */}

@@ -27,6 +27,7 @@ const Navbar = ({
   isRetraining,
   mlInfo,
   onOpenAnalytics,
+  onOpenProtocols,
   totalSnapshots
 }) => {
   const currentIfaceObj = interfaces.find(i => i.name === activeInterface) || interfaces[0];
@@ -190,6 +191,17 @@ const Navbar = ({
           >
             <Database size={14} />
             <span>History ({totalSnapshots || 0})</span>
+          </button>
+
+          {/* Protocols & ML Suite Modal */}
+          <button
+            className="btn-secondary"
+            onClick={onOpenProtocols}
+            title="DHCP, DNS, Multicast & ML Suite"
+            style={{ backgroundColor: 'rgba(6, 182, 212, 0.15)', borderColor: 'rgba(6, 182, 212, 0.3)', color: '#22d3ee' }}
+          >
+            <Wifi size={14} />
+            <span>Protocols & ML</span>
           </button>
 
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sliders, Check, RotateCcw } from 'lucide-react';
+import { API_BASE } from '../config';
 
 const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy }) => {
   const [allocations, setAllocations] = useState({
@@ -43,7 +44,7 @@ const StaticSliders = ({ activeAllocations, onSaveAllocations, isStaticStrategy 
     setIsApplying(true);
     setFeedbackMsg(null);
     try {
-      const res = await fetch('http://localhost:8000/api/slices/configure_static', {
+      const res = await fetch(`${API_BASE}/api/slices/configure_static`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

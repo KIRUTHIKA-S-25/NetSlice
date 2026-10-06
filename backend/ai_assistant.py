@@ -2,7 +2,10 @@ import os
 import json
 import urllib.request
 import urllib.error
+from dotenv import load_dotenv
 from database import get_recent_history, get_analytics_summary
+
+load_dotenv()
 
 def query_llm_api(system_prompt: str, user_message: str):
     """
@@ -13,26 +16,48 @@ def query_llm_api(system_prompt: str, user_message: str):
     openai_key = os.environ.get("OPENAI_API_KEY")
 
     if gemini_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-            payload = {
-                "contents": [
-                    {
-                        "role": "user",
-                        "parts": [{"text": f"{system_prompt}\n\nUser Question: {user_message}"}]
+        # Try models in order of capability: best first, lite as fallback
+        gemini_models = [
+            "gemini-3.8-flash",
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest",
+        ]
+        for model_name in gemini_models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
+                payload = {
+                    "system_instruction": {
+                        "parts": [{"text": system_prompt}]
+                    },
+                    "contents": [
+                        {
+                            "role": "user",
+                            "parts": [{"text": user_message}]
+                        }
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 1024
                     }
-                ]
-            }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception as e:
-            print("Gemini API call skipped or error:", e)
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+            except urllib.error.HTTPError as e:
+                error_code = e.code
+                print(f"Gemini {model_name} returned HTTP {error_code}, trying next model...")
+                if error_code == 503:
+                    continue  # Model overloaded, try next one
+                else:
+                    break  # Non-recoverable error (e.g. 400, 401), stop trying
+            except Exception as e:
+                print(f"Gemini {model_name} error:", e)
+                continue
 
     if openai_key:
         try:
@@ -125,31 +150,50 @@ def generate_ai_response(user_message: str, simulation_state, db_path="network_l
     recent_history = get_recent_history(db_path, limit=15)
     summary_stats = get_analytics_summary(db_path)
 
-    # Build system context for LLM or local reasoning engine
-    system_context = f"""
-You are the NetSlice AI Assistant, an expert network controller specialized in 5G/6G Network Slicing and QoS Optimization.
-Operating Mode: {mode.upper()} (Physical Adapter: {active_iface})
-Total Shared Bandwidth Pool: 100 Mbps.
-Slices:
-1. Low-Latency (URLLC, Port 9101, target <15ms)
-2. High-Bandwidth (eMBB, Port 9102, video/data)
-3. General-Purpose (mMTC / Best-Effort IoT, Port 9103)
+    # Build rich system context for the LLM
+    system_context = f"""You are the NetSlice AI Assistant — a smart, friendly, and knowledgeable assistant embedded in a 5G/6G Network Slicing Dashboard application.
 
-Current System State:
-- Simulation Running: {simulation_state.get('is_running', False)}
-- Current Strategy: {strategy}
-- Active Analysis: {json.dumps(analysis, indent=2)}
-- Total Historical Snapshots in SQLite: {summary_stats.get('total_records', 0)}
+## YOUR DUAL ROLE:
+1. **Network Expert:** You have real-time access to the network simulation/monitoring data shown below. When users ask about network performance, slices, bandwidth, latency, packet drops, or anything related to this dashboard, use the live data to give accurate, specific answers.
+2. **General Knowledge Assistant:** You can also answer general questions about ANY topic — technology, science, programming, math, history, or anything else. You are NOT limited to only network questions.
+
+## RESPONSE GUIDELINES:
+- Keep answers concise and well-formatted using Markdown (bold, bullet points, code blocks).
+- For network questions, always reference actual data values from the live telemetry below.
+- For general questions, answer naturally and helpfully just like any smart AI assistant would.
+- Use emojis sparingly for visual clarity (✅, ⚠️, 📊, etc.).
+- If the simulation is not running and the user asks about live metrics, let them know and suggest starting the simulation.
+
+## CURRENT NETWORK STATE:
+- **Operating Mode:** {mode.upper()} (Interface: {active_iface})
+- **Simulation Running:** {simulation_state.get('is_running', False)}
+- **Active Allocation Strategy:** {strategy}
+- **Total Shared Bandwidth Pool:** 100 Mbps
+
+### Slices:
+1. **Low-Latency (URLLC)** — Port 9101, target latency < 15ms (VoIP, Gaming)
+2. **High-Bandwidth (eMBB)** — Port 9102 (Video Streaming, Downloads)
+3. **General-Purpose (mMTC)** — Port 9103 (IoT, Web Browsing)
+
+### Live Telemetry Analysis:
+{json.dumps(analysis, indent=2)}
+
+### Database Summary:
+- Total Historical Snapshots: {summary_stats.get('total_records', 0)}
 - Historical QoS Violations: {summary_stats.get('qos_violations', 0)}
 - Overall Packet Drop Rate: {summary_stats.get('overall_drop_rate', 0)}%
+- Total Packets Processed: {summary_stats.get('total_packets_processed', 0):,}
+- Total Packets Dropped: {summary_stats.get('total_packets_dropped', 0)}
 """
 
-    # Check if external LLM configured
+    # Try the LLM API first (Gemini / OpenAI)
     llm_output = query_llm_api(system_context, user_message)
     if llm_output:
         return llm_output
 
-    # Intelligent contextual local reasoning engine
+    # ═══════════════════════════════════════════════════════════
+    # FALLBACK: Local hardcoded reasoning (if no API key or API fails)
+    # ═══════════════════════════════════════════════════════════
     msg = user_message.strip().lower()
 
     # 1. Polite greetings & conversational queries (e.g. "hi", "how are you", "who are you")

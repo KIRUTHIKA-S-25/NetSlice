@@ -101,9 +101,16 @@ const SliceCards = ({ metrics, allocations }) => {
                   <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)' }}>
                     {meta.displayName}
                   </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {meta.category}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {meta.category}
+                    </span>
+                    {data.real_port && (
+                      <span className="badge badge-cyan" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                        Port {data.real_port}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

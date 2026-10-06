@@ -110,11 +110,16 @@ def analyze_network_state(current_snapshot, strategy, simulation_state):
     }
 
 def generate_ai_response(user_message: str, simulation_state, db_path="network_logs.db") -> str:
-    monitor = simulation_state.get("monitor")
+    mode = simulation_state.get("mode", "simulation")
     strategy = simulation_state.get("strategy", "static")
-    latest_snapshot = None
-    if monitor and monitor.metrics_history:
-        latest_snapshot = monitor.metrics_history[-1]
+    active_iface = simulation_state.get("active_interface", "Wi-Fi")
+    
+    if mode == "real_network" and simulation_state.get("real_net_mgr"):
+        hist = simulation_state["real_net_mgr"].metrics_history
+        latest_snapshot = hist[-1] if hist else None
+    else:
+        monitor = simulation_state.get("monitor")
+        latest_snapshot = monitor.metrics_history[-1] if (monitor and monitor.metrics_history) else None
 
     analysis = analyze_network_state(latest_snapshot, strategy, simulation_state)
     recent_history = get_recent_history(db_path, limit=15)
@@ -123,11 +128,12 @@ def generate_ai_response(user_message: str, simulation_state, db_path="network_l
     # Build system context for LLM or local reasoning engine
     system_context = f"""
 You are the NetSlice AI Assistant, an expert network controller specialized in 5G/6G Network Slicing and QoS Optimization.
+Operating Mode: {mode.upper()} (Physical Adapter: {active_iface})
 Total Shared Bandwidth Pool: 100 Mbps.
 Slices:
-1. Low-Latency (URLLC, Ultra-Reliable Low Latency, target <15ms)
-2. High-Bandwidth (eMBB, Enhanced Mobile Broadband, video/data)
-3. General-Purpose (mMTC / Best-Effort IoT)
+1. Low-Latency (URLLC, Port 9101, target <15ms)
+2. High-Bandwidth (eMBB, Port 9102, video/data)
+3. General-Purpose (mMTC / Best-Effort IoT, Port 9103)
 
 Current System State:
 - Simulation Running: {simulation_state.get('is_running', False)}

@@ -7,13 +7,20 @@ import {
   Database, 
   Cpu, 
   Layers, 
-  ShieldCheck 
+  ShieldCheck,
+  Radio,
+  Wifi
 } from 'lucide-react';
 
 const Navbar = ({
   isRunning,
   strategy,
   onStrategyChange,
+  mode = 'simulation',
+  onModeChange,
+  activeInterface = 'Wi-Fi',
+  onInterfaceChange,
+  interfaces = [],
   onStart,
   onStop,
   onRetrain,
@@ -22,6 +29,8 @@ const Navbar = ({
   onOpenAnalytics,
   totalSnapshots
 }) => {
+  const currentIfaceObj = interfaces.find(i => i.name === activeInterface) || interfaces[0];
+
   return (
     <header className="glass-card" style={{ padding: '18px 28px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
@@ -32,15 +41,17 @@ const Navbar = ({
             width: '46px',
             height: '46px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.3))',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
+            background: mode === 'real_network'
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(56, 189, 248, 0.35))'
+              : 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.3))',
+            border: `1px solid ${mode === 'real_network' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(56, 189, 248, 0.4)'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--accent-cyan)',
-            boxShadow: 'var(--glow-cyan)'
+            color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)',
+            boxShadow: mode === 'real_network' ? 'var(--glow-emerald)' : 'var(--glow-cyan)'
           }}>
-            <Layers size={26} />
+            {mode === 'real_network' ? <Radio size={26} /> : <Layers size={26} />}
           </div>
 
           <div>
@@ -57,13 +68,24 @@ const Navbar = ({
               </h1>
               <span className={`badge ${isRunning ? 'badge-emerald' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                 <span className={`pulse-indicator ${isRunning ? '' : 'idle'}`}></span>
-                {isRunning ? 'SIMULATION LIVE' : 'SYSTEM IDLE'}
+                {isRunning ? (mode === 'real_network' ? 'REAL NETWORK LIVE' : 'SIMULATION LIVE') : 'SYSTEM IDLE'}
               </span>
+
+              {mode === 'real_network' && (
+                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Wifi size={12} />
+                  {currentIfaceObj ? `${currentIfaceObj.name} (${currentIfaceObj.ip})` : 'Wi-Fi (10.57.56.13)'}
+                </span>
+              )}
             </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>5G/6G Autonomous QoS Slicing Engine</span>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span>5G/6G Autonomous QoS Slicing</span>
               <span>•</span>
-              <span style={{ color: 'var(--accent-cyan)' }}>Total Pool: 100 Mbps</span>
+              <span style={{ color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)' }}>
+                Mode: {mode === 'real_network' ? 'Real Network (Wi-Fi / Sockets)' : 'Synthetic Simulation'}
+              </span>
+              <span>•</span>
+              <span style={{ color: 'var(--accent-cyan)' }}>Pool: 100 Mbps</span>
               <span>•</span>
               <span style={{ color: mlInfo?.sample_count > 0 ? 'var(--accent-emerald)' : 'var(--text-dim)' }}>
                 ML: {mlInfo?.status || 'DecisionTree'}
@@ -75,6 +97,55 @@ const Navbar = ({
         {/* Action Controls & Strategy Bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           
+          {/* Operational Mode Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '6px' }}>Mode:</span>
+            <select
+              value={mode}
+              onChange={(e) => onModeChange && onModeChange(e.target.value)}
+              disabled={isRunning}
+              style={{
+                background: 'transparent',
+                color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)',
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                cursor: isRunning ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <option value="real_network" style={{ background: '#0f172a', color: '#34d399' }}>Real Network (Wi-Fi)</option>
+              <option value="simulation" style={{ background: '#0f172a', color: '#38bdf8' }}>Synthetic Simulation</option>
+            </select>
+          </div>
+
+          {/* Interface Selector (Shown when in Real Network mode) */}
+          {mode === 'real_network' && interfaces.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '6px' }}>NIC:</span>
+              <select
+                value={activeInterface}
+                onChange={(e) => onInterfaceChange && onInterfaceChange(e.target.value)}
+                disabled={isRunning}
+                style={{
+                  background: 'transparent',
+                  color: 'white',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: isRunning ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {interfaces.map(iface => (
+                  <option key={iface.name} value={iface.name} style={{ background: '#0f172a', color: 'white' }}>
+                    {iface.name} ({iface.ip})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Strategy Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '8px', paddingLeft: '4px' }}>Strategy:</span>
@@ -102,7 +173,7 @@ const Navbar = ({
           {!isRunning ? (
             <button className="btn-primary" onClick={onStart}>
               <Play size={16} fill="white" />
-              <span>Start Simulation</span>
+              <span>Start {mode === 'real_network' ? 'Live Network' : 'Simulation'}</span>
             </button>
           ) : (
             <button className="btn-danger" onClick={onStop}>

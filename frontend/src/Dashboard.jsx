@@ -20,6 +20,9 @@ const Dashboard = () => {
   });
   const [logs, setLogs] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [mode, setMode] = useState('real_network');
+  const [activeInterface, setActiveInterface] = useState('Wi-Fi');
+  const [interfaces, setInterfaces] = useState([]);
   const [strategy, setStrategy] = useState('static');
   const [mlInfo, setMlInfo] = useState(null);
   const [isRetraining, setIsRetraining] = useState(false);
@@ -27,19 +30,34 @@ const Dashboard = () => {
   const [totalSnapshots, setTotalSnapshots] = useState(0);
   const [bannerAlert, setBannerAlert] = useState(null);
 
-  // Fetch initial system status
+  // Fetch initial system status & network interfaces
   const fetchStatus = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/status`);
       const data = await res.json();
       setIsRunning(data.is_running);
       setStrategy(data.strategy);
+      if (data.mode) setMode(data.mode);
+      if (data.active_interface) setActiveInterface(data.active_interface);
+      if (data.detected_interfaces) setInterfaces(data.detected_interfaces);
       setMlInfo(data.ml_info);
       if (data.custom_static) {
         setAllocations(data.custom_static);
       }
     } catch (e) {
       console.error('Error fetching initial status:', e);
+    }
+  };
+
+  const fetchInterfaces = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/network/interfaces`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        setInterfaces(data.interfaces || []);
+      }
+    } catch (e) {
+      // offline
     }
   };
 
@@ -58,6 +76,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchStatus();
+    fetchInterfaces();
     fetchAnalyticsCount();
   }, []);
 
@@ -74,10 +93,14 @@ const Dashboard = () => {
           if (data.allocations) setAllocations(data.allocations);
           if (data.logs) setLogs(data.logs);
           if (data.ml_info) setMlInfo(data.ml_info);
+          if (data.mode) setMode(data.mode);
+          if (data.interface) setActiveInterface(data.interface);
           setIsRunning(true);
         } else if (data.status === 'idle') {
           if (data.logs) setLogs(data.logs);
           if (data.ml_info) setMlInfo(data.ml_info);
+          if (data.mode) setMode(data.mode);
+          if (data.interface) setActiveInterface(data.interface);
         }
       } catch (e) {
         // backend offline
@@ -87,12 +110,43 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Handle Mode Change
+  const handleModeChange = async (newMode) => {
+    setMode(newMode);
+    try {
+      await fetch(`${API_BASE}/api/network/mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode, interface: activeInterface })
+      });
+      setBannerAlert({ 
+        type: 'info', 
+        text: `Switched operational mode to ${newMode === 'real_network' ? 'REAL NETWORK (Wi-Fi Sockets)' : 'SYNTHETIC SIMULATION'}` 
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleInterfaceChange = async (newIface) => {
+    setActiveInterface(newIface);
+    try {
+      await fetch(`${API_BASE}/api/network/mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, interface: newIface })
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Handle Strategy Change
   const handleStrategyChange = (newStrategy) => {
     setStrategy(newStrategy);
   };
 
-  // Start Simulation
+  // Start Simulation or Real Network
   const handleStart = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/start`, {
@@ -100,20 +154,27 @@ const Dashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           strategy,
+          mode,
+          interface: activeInterface,
           custom_static: allocations
         })
       });
       const data = await res.json();
       if (data.status === 'success') {
         setIsRunning(true);
-        setBannerAlert({ type: 'success', text: `Simulation running with ${strategy.toUpperCase()} strategy` });
+        setBannerAlert({ 
+          type: 'success', 
+          text: mode === 'real_network' 
+            ? `Real Network live on ${activeInterface} (Sockets Ports 9101-9103) with ${strategy.toUpperCase()}` 
+            : `Simulation running with ${strategy.toUpperCase()} strategy` 
+        });
         fetchAnalyticsCount();
       } else {
         setBannerAlert({ type: 'error', text: data.message });
       }
     } catch (e) {
       console.error(e);
-      setBannerAlert({ type: 'error', text: 'Failed to start simulation. Is backend running?' });
+      setBannerAlert({ type: 'error', text: 'Failed to start engine. Is backend running?' });
     } finally {
       setTimeout(() => setBannerAlert(null), 4000);
     }
@@ -165,6 +226,11 @@ const Dashboard = () => {
         isRunning={isRunning}
         strategy={strategy}
         onStrategyChange={handleStrategyChange}
+        mode={mode}
+        onModeChange={handleModeChange}
+        activeInterface={activeInterface}
+        onInterfaceChange={handleInterfaceChange}
+        interfaces={interfaces}
         onStart={handleStart}
         onStop={handleStop}
         onRetrain={handleRetrain}

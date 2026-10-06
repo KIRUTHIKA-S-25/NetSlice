@@ -16,6 +16,8 @@ const Navbar = ({
   onStrategyChange,
   mode = 'real_network',
   onModeChange,
+  theme = 'slate',
+  onThemeChange,
   activeInterface = 'Wi-Fi',
   onInterfaceChange,
   interfaces = [],
@@ -127,9 +129,32 @@ const Navbar = ({
                 cursor: isRunning ? 'not-allowed' : 'pointer'
               }}
             >
-              <option value="ai_assisted" style={{ background: '#111827', color: '#ffffff' }}>AI Auto-Balance (Dynamic)</option>
-              <option value="rule_based" style={{ background: '#111827', color: '#ffffff' }}>Rule-Based (Thresholds)</option>
-              <option value="static" style={{ background: '#111827', color: '#ffffff' }}>Manual Allocation</option>
+              <option value="ai_assisted" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>AI Auto-Balance (Dynamic)</option>
+              <option value="rule_based" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Rule-Based (Thresholds)</option>
+              <option value="static" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Manual Allocation</option>
+            </select>
+          </div>
+
+          {/* Theme Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-subtle)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Theme:</span>
+            <select
+              value={theme}
+              onChange={(e) => onThemeChange && onThemeChange(e.target.value)}
+              style={{
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.8rem',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="slate" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Midnight Slate</option>
+              <option value="charcoal" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Charcoal Zinc</option>
+              <option value="ocean" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Ocean Navy</option>
+              <option value="light" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Executive Light</option>
             </select>
           </div>
 

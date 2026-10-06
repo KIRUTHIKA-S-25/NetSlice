@@ -23,12 +23,18 @@ const Dashboard = () => {
   const [mode, setMode] = useState('real_network');
   const [activeInterface, setActiveInterface] = useState('Wi-Fi');
   const [interfaces, setInterfaces] = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem('netslice-theme') || 'slate');
   const [strategy, setStrategy] = useState('static');
   const [mlInfo, setMlInfo] = useState(null);
   const [isRetraining, setIsRetraining] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [totalSnapshots, setTotalSnapshots] = useState(0);
   const [bannerAlert, setBannerAlert] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('netslice-theme', theme);
+  }, [theme]);
 
   // Fetch initial system status & network interfaces
   const fetchStatus = async () => {
@@ -228,6 +234,8 @@ const Dashboard = () => {
         onStrategyChange={handleStrategyChange}
         mode={mode}
         onModeChange={handleModeChange}
+        theme={theme}
+        onThemeChange={setTheme}
         activeInterface={activeInterface}
         onInterfaceChange={handleInterfaceChange}
         interfaces={interfaces}

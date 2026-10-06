@@ -1,22 +1,20 @@
 import React from 'react';
 import { 
-  Activity, 
   Play, 
   Square, 
   RotateCw, 
   Database, 
   Cpu, 
-  Layers, 
-  ShieldCheck,
-  Radio,
-  Wifi
+  Wifi,
+  Sliders,
+  CheckCircle2
 } from 'lucide-react';
 
 const Navbar = ({
   isRunning,
   strategy,
   onStrategyChange,
-  mode = 'simulation',
+  mode = 'real_network',
   onModeChange,
   activeInterface = 'Wi-Fi',
   onInterfaceChange,
@@ -32,177 +30,141 @@ const Navbar = ({
   const currentIfaceObj = interfaces.find(i => i.name === activeInterface) || interfaces[0];
 
   return (
-    <header className="glass-card" style={{ padding: '18px 28px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+    <header className="glass-card" style={{ padding: '16px 24px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         
-        {/* Brand & System Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Brand & Connection State */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '12px',
-            background: mode === 'real_network'
-              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(56, 189, 248, 0.35))'
-              : 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.3))',
-            border: `1px solid ${mode === 'real_network' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(56, 189, 248, 0.4)'}`,
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            backgroundColor: '#1e293b',
+            border: '1px solid #334155',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)',
-            boxShadow: mode === 'real_network' ? 'var(--glow-emerald)' : 'var(--glow-cyan)'
+            color: '#38bdf8'
           }}>
-            {mode === 'real_network' ? <Radio size={26} /> : <Layers size={26} />}
+            <Sliders size={20} />
           </div>
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ 
-                fontSize: '1.45rem', 
-                fontWeight: '800', 
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, #ffffff 40%, #94a3b8)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                NetSlice AI Controller
+              <h1 style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.02em', color: '#ffffff' }}>
+                NetSlice
               </h1>
-              <span className={`badge ${isRunning ? 'badge-emerald' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span className={`badge ${isRunning ? 'badge-emerald' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <span className={`pulse-indicator ${isRunning ? '' : 'idle'}`}></span>
-                {isRunning ? (mode === 'real_network' ? 'REAL NETWORK LIVE' : 'SIMULATION LIVE') : 'SYSTEM IDLE'}
+                {isRunning ? 'Live Monitoring' : 'Paused'}
               </span>
 
               {mode === 'real_network' && (
-                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <Wifi size={12} />
+                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Wifi size={13} />
                   {currentIfaceObj?.wifi_details?.ssid 
-                    ? `Wi-Fi: "${currentIfaceObj.wifi_details.ssid}" (${currentIfaceObj.wifi_details.signal} • ${currentIfaceObj.ip})`
-                    : (currentIfaceObj ? `${currentIfaceObj.name} (${currentIfaceObj.ip})` : 'Wi-Fi: "Magic" (10.57.56.13)')}
+                    ? `Wi-Fi: "${currentIfaceObj.wifi_details.ssid}" (${currentIfaceObj.wifi_details.signal || '96%'})`
+                    : 'Wi-Fi: "Magic"'}
                 </span>
               )}
             </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span>5G/6G Autonomous QoS Slicing</span>
+            
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Adaptive bandwidth manager</span>
               <span>•</span>
-              <span style={{ color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)' }}>
-                Mode: {mode === 'real_network' ? 'Real Network (Wi-Fi / Sockets)' : 'Synthetic Simulation'}
-              </span>
-              <span>•</span>
-              <span style={{ color: 'var(--accent-cyan)' }}>Pool: 100 Mbps</span>
-              <span>•</span>
-              <span style={{ color: mlInfo?.sample_count > 0 ? 'var(--accent-emerald)' : 'var(--text-dim)' }}>
-                ML: {mlInfo?.status || 'DecisionTree'}
-              </span>
+              <span>Capacity: 100 Mbps</span>
+              {mlInfo?.sample_count > 0 && (
+                <>
+                  <span>•</span>
+                  <span style={{ color: 'var(--status-success)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <CheckCircle2 size={12} /> Model trained ({mlInfo.sample_count} samples)
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        {/* Action Controls & Strategy Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        {/* Controls Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           
-          {/* Operational Mode Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '6px' }}>Mode:</span>
+          {/* Operational Mode */}
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#161f33', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Source:</span>
             <select
               value={mode}
               onChange={(e) => onModeChange && onModeChange(e.target.value)}
               disabled={isRunning}
               style={{
                 background: 'transparent',
-                color: mode === 'real_network' ? 'var(--accent-emerald)' : 'var(--accent-cyan)',
+                color: '#ffffff',
                 border: 'none',
                 outline: 'none',
-                fontSize: '0.82rem',
-                fontWeight: '700',
+                fontSize: '0.8rem',
+                fontWeight: '500',
                 cursor: isRunning ? 'not-allowed' : 'pointer'
               }}
             >
-              <option value="real_network" style={{ background: '#0f172a', color: '#34d399' }}>Real Network (Wi-Fi)</option>
-              <option value="simulation" style={{ background: '#0f172a', color: '#38bdf8' }}>Synthetic Simulation</option>
+              <option value="real_network" style={{ background: '#111827', color: '#ffffff' }}>Live Network (Wi-Fi)</option>
+              <option value="simulation" style={{ background: '#111827', color: '#ffffff' }}>Simulation Sandbox</option>
             </select>
           </div>
 
-          {/* Interface Selector (Shown when in Real Network mode) */}
-          {mode === 'real_network' && interfaces.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '6px' }}>NIC:</span>
-              <select
-                value={activeInterface}
-                onChange={(e) => onInterfaceChange && onInterfaceChange(e.target.value)}
-                disabled={isRunning}
-                style={{
-                  background: 'transparent',
-                  color: 'white',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  cursor: isRunning ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {interfaces.map(iface => (
-                  <option key={iface.name} value={iface.name} style={{ background: '#0f172a', color: 'white' }}>
-                    {iface.name} ({iface.ip})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Strategy Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '8px', paddingLeft: '4px' }}>Strategy:</span>
+          {/* Allocation Strategy */}
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#161f33', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Balancing:</span>
             <select
               value={strategy}
               onChange={(e) => onStrategyChange(e.target.value)}
               disabled={isRunning}
               style={{
                 background: 'transparent',
-                color: 'white',
+                color: '#ffffff',
                 border: 'none',
                 outline: 'none',
-                fontSize: '0.85rem',
-                fontWeight: '600',
+                fontSize: '0.8rem',
+                fontWeight: '500',
                 cursor: isRunning ? 'not-allowed' : 'pointer'
               }}
             >
-              <option value="static" style={{ background: '#0f172a', color: 'white' }}>Static Allocation</option>
-              <option value="rule_based" style={{ background: '#0f172a', color: 'white' }}>Rule-Based Dynamic</option>
-              <option value="ai_assisted" style={{ background: '#0f172a', color: 'white' }}>AI-Assisted (Decision Tree)</option>
+              <option value="ai_assisted" style={{ background: '#111827', color: '#ffffff' }}>AI Auto-Balance (Dynamic)</option>
+              <option value="rule_based" style={{ background: '#111827', color: '#ffffff' }}>Rule-Based (Thresholds)</option>
+              <option value="static" style={{ background: '#111827', color: '#ffffff' }}>Manual Allocation</option>
             </select>
           </div>
 
-          {/* Start / Stop Button */}
+          {/* Start / Stop Monitoring Button */}
           {!isRunning ? (
             <button className="btn-primary" onClick={onStart}>
-              <Play size={16} fill="white" />
-              <span>Start {mode === 'real_network' ? 'Live Network' : 'Simulation'}</span>
+              <Play size={14} fill="currentColor" />
+              <span>Start Monitoring</span>
             </button>
           ) : (
             <button className="btn-danger" onClick={onStop}>
-              <Square size={16} fill="white" />
+              <Square size={14} fill="currentColor" />
               <span>Stop</span>
             </button>
           )}
 
-          {/* ML Retrain Button */}
+          {/* Retrain Model Button */}
           <button
             className="btn-secondary"
             onClick={onRetrain}
             disabled={isRetraining}
-            title="Retrain Decision Tree models from historical SQLite records"
+            title="Retrain model on recorded traffic patterns"
           >
-            <Cpu size={16} color={isRetraining ? 'var(--accent-amber)' : 'var(--accent-purple)'} />
-            <span>{isRetraining ? 'Retraining...' : 'Retrain AI'}</span>
+            <Cpu size={14} color={isRetraining ? 'var(--status-warning)' : 'inherit'} />
+            <span>{isRetraining ? 'Retraining...' : 'Retrain Model'}</span>
           </button>
 
-          {/* Database Analytics Button */}
+          {/* History & Analytics Modal */}
           <button
             className="btn-secondary"
             onClick={onOpenAnalytics}
-            title="View historical SQLite network analytics and reports"
+            title="View database history"
           >
-            <Database size={16} color="var(--accent-cyan)" />
-            <span>SQLite Analytics ({totalSnapshots || 0})</span>
+            <Database size={14} />
+            <span>History ({totalSnapshots || 0})</span>
           </button>
 
         </div>

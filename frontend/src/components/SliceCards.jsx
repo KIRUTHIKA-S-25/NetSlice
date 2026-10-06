@@ -1,61 +1,53 @@
 import React from 'react';
-import { Zap, Wifi, Activity, AlertTriangle, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { Zap, Wifi, Activity, AlertCircle, CheckCircle, Video, Gamepad2, Globe } from 'lucide-react';
 
-const sliceMetadata = {
+const sliceConfig = {
   low_latency: {
-    displayName: 'Low-Latency Slice',
-    category: 'URLLC (Critical Telemetry)',
-    sla: 'Latency < 15 ms',
-    color: 'var(--accent-cyan)',
-    glow: 'var(--glow-cyan)',
-    badgeClass: 'badge-cyan',
-    icon: Zap
+    title: 'Low-Latency Traffic',
+    subtitle: 'Calls, gaming & real-time tasks',
+    slaTarget: 'Target: < 15 ms latency',
+    accentColor: 'var(--slice-low-latency)',
+    icon: Gamepad2
   },
   high_bandwidth: {
-    displayName: 'High-Bandwidth Slice',
-    category: 'eMBB (Video & AR/VR)',
-    sla: 'Throughput > 40 Mbps',
-    color: 'var(--accent-purple)',
-    glow: 'var(--glow-purple)',
-    badgeClass: 'badge-purple',
-    icon: Activity
+    title: 'High-Bandwidth Traffic',
+    subtitle: 'Streaming, downloads & video',
+    slaTarget: 'Target: > 40 Mbps throughput',
+    accentColor: 'var(--slice-high-bandwidth)',
+    icon: Video
   },
   general: {
-    displayName: 'General-Purpose Slice',
-    category: 'mMTC (Smart Sensors & IoT)',
-    sla: 'Best-Effort Delivery',
-    color: 'var(--accent-emerald)',
-    glow: 'var(--glow-emerald)',
-    badgeClass: 'badge-emerald',
-    icon: Wifi
+    title: 'Standard Web Traffic',
+    subtitle: 'Browsing, sync & everyday apps',
+    slaTarget: 'Best-effort delivery',
+    accentColor: 'var(--slice-general)',
+    icon: Globe
   }
 };
 
 const SliceCards = ({ metrics, allocations }) => {
   if (!metrics) {
     return (
-      <div className="glass-card" style={{ padding: '36px', textAlign: 'center', marginBottom: '24px' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          Simulation is currently stopped. Click <strong>Start Simulation</strong> above to stream live telemetry.
+      <div className="glass-card" style={{ padding: '28px', textAlign: 'center', marginBottom: '20px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          Monitoring is currently idle. Click <strong>Start Monitoring</strong> above to stream live traffic.
         </p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '20px' }}>
       {Object.entries(metrics).map(([key, data]) => {
-        const meta = sliceMetadata[key] || {
-          displayName: key,
-          category: 'Standard Slice',
-          sla: 'Standard SLA',
-          color: 'var(--accent-blue)',
-          glow: 'none',
-          badgeClass: 'badge-cyan',
-          icon: Wifi
+        const config = sliceConfig[key] || {
+          title: key,
+          subtitle: 'General slice',
+          slaTarget: 'Standard QoS',
+          accentColor: '#3b82f6',
+          icon: Activity
         };
 
-        const Icon = meta.icon;
+        const Icon = config.icon;
         const allocated = allocations?.[key] ?? data.allocated_bandwidth ?? 0;
         const throughput = data.throughput_mbps ?? 0;
         const utilization = data.utilization ?? 0;
@@ -63,150 +55,138 @@ const SliceCards = ({ metrics, allocations }) => {
         const dropped = data.packets_dropped ?? 0;
         const processed = data.packets_processed ?? 0;
 
-        // SLA Evaluation
         const isUrllc = key === 'low_latency';
-        const isSlaViolated = (isUrllc && latencyMs > 15) || dropped > 0;
-        const isCongested = utilization > 90;
+        const hasDrops = dropped > 0;
+        const hasLatencySpike = isUrllc && latencyMs > 15;
+        const isHealthy = !hasDrops && !hasLatencySpike && utilization < 90;
 
         return (
           <div 
             key={key} 
             className="glass-card" 
             style={{ 
-              padding: '24px', 
+              padding: '20px', 
               position: 'relative',
-              overflow: 'hidden',
-              borderColor: isSlaViolated ? 'rgba(244, 63, 94, 0.4)' : undefined,
-              boxShadow: isSlaViolated ? '0 0 20px rgba(244, 63, 94, 0.2)' : undefined
+              borderColor: hasDrops ? 'rgba(239, 68, 68, 0.4)' : undefined
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${meta.color}`,
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: '#161f33',
+                  border: '1px solid #1f2937',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: meta.color,
-                  boxShadow: meta.glow
+                  color: config.accentColor
                 }}>
-                  <Icon size={20} />
+                  <Icon size={18} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                    {meta.displayName}
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+                    {config.title}
                   </h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {meta.category}
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                      {config.subtitle}
                     </span>
                     {data.real_port && (
-                      <span className="badge badge-cyan" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
-                        Port {data.real_port}
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                        (Port {data.real_port})
                       </span>
                     )}
                   </div>
                 </div>
               </div>
 
-              <span className={`badge ${isSlaViolated ? 'badge-rose' : 'badge-emerald'}`}>
-                {isSlaViolated ? 'SLA VIOLATION' : 'SLA HEALTHY'}
-              </span>
+              {isHealthy ? (
+                <span className="badge badge-emerald" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle size={12} /> Healthy
+                </span>
+              ) : hasDrops ? (
+                <span className="badge badge-rose" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertCircle size={12} /> Packet Drops
+                </span>
+              ) : (
+                <span className="badge badge-amber" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  High Load
+                </span>
+              )}
             </div>
 
-            {/* Throughput & Bandwidth Meter */}
-            <div style={{ marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+            {/* Throughput & Capacity Bar */}
+            <div style={{ marginBottom: '14px', backgroundColor: '#0c101c', padding: '12px', borderRadius: '8px', border: '1px solid #1e2638' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Throughput / Cap</span>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Current Throughput</span>
                 <div>
-                  <span style={{ fontSize: '1.3rem', fontWeight: '800', color: meta.color }}>
-                    {throughput.toFixed(2)}
+                  <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff' }}>
+                    {throughput.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '4px' }}>
-                    / {allocated.toFixed(1)} Mbps
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '3px' }}>
+                    / {allocated.toFixed(0)} Mbps
                   </span>
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '6px', backgroundColor: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
                 <div 
                   style={{ 
                     width: `${Math.min(100, utilization)}%`, 
                     height: '100%', 
-                    background: utilization > 90 ? 'var(--accent-rose)' : utilization > 75 ? 'var(--accent-amber)' : meta.color,
-                    borderRadius: '4px',
-                    transition: 'width 0.5s ease, background 0.3s ease'
+                    backgroundColor: utilization > 90 ? 'var(--status-danger)' : utilization > 75 ? 'var(--status-warning)' : config.accentColor,
+                    borderRadius: '3px',
+                    transition: 'width 0.4s ease'
                   }} 
                 />
               </div>
             </div>
 
-            {/* Key Telemetry Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {/* Metrics Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               
-              {/* Utilization */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Utilization</div>
+              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Utilization</div>
                 <div style={{ 
-                  fontSize: '1.05rem', 
-                  fontWeight: '700', 
-                  color: utilization > 90 ? 'var(--accent-rose)' : utilization > 75 ? 'var(--accent-amber)' : 'var(--accent-emerald)'
+                  fontSize: '0.95rem', 
+                  fontWeight: '600', 
+                  color: utilization > 90 ? 'var(--status-danger)' : utilization > 75 ? 'var(--status-warning)' : 'inherit'
                 }}>
-                  {utilization.toFixed(1)}%
+                  {utilization.toFixed(0)}%
                 </div>
               </div>
 
-              {/* Avg Latency */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Latency</div>
+              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Latency</div>
                 <div style={{ 
-                  fontSize: '1.05rem', 
-                  fontWeight: '700',
-                  color: isUrllc && latencyMs > 15 ? 'var(--accent-rose)' : 'var(--text-main)'
+                  fontSize: '0.95rem', 
+                  fontWeight: '600',
+                  color: hasLatencySpike ? 'var(--status-danger)' : 'inherit'
                 }}>
-                  {latencyMs.toFixed(2)} ms
+                  {latencyMs.toFixed(1)} ms
                 </div>
               </div>
 
-              {/* Packets Processed */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Packets Processed</div>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-main)' }}>
-                  {processed.toLocaleString()}
-                </div>
-              </div>
-
-              {/* Packets Dropped */}
-              <div style={{ 
-                background: dropped > 0 ? 'rgba(244, 63, 94, 0.1)' : 'rgba(255,255,255,0.02)', 
-                padding: '10px', 
-                borderRadius: '8px', 
-                border: dropped > 0 ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid var(--border-subtle)' 
-              }}>
-                <div style={{ fontSize: '0.72rem', color: dropped > 0 ? 'var(--accent-rose)' : 'var(--text-muted)', marginBottom: '2px' }}>
-                  Dropped Packets
-                </div>
-                <div style={{ fontSize: '1rem', fontWeight: '700', color: dropped > 0 ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
+              <div style={{ backgroundColor: '#131927', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e2638' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Drops</div>
+                <div style={{ 
+                  fontSize: '0.95rem', 
+                  fontWeight: '600', 
+                  color: dropped > 0 ? 'var(--status-danger)' : 'var(--text-secondary)'
+                }}>
                   {dropped}
                 </div>
               </div>
 
             </div>
 
-            {/* SLA Target Note */}
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-              <span>Target: {meta.sla}</span>
-              {dropped > 0 && (
-                <span style={{ color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <AlertTriangle size={12} /> Buffer Overflow
-                </span>
-              )}
+            {/* Target Note */}
+            <div style={{ marginTop: '10px', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+              <span>{config.slaTarget}</span>
+              <span>{processed.toLocaleString()} pkts processed</span>
             </div>
 
           </div>

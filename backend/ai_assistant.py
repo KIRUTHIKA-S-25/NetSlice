@@ -154,92 +154,87 @@ Current System State:
 
     if not simulation_state.get("is_running", False):
         return (
-            "👋 **NetSlice AI Controller here!**\n\n"
-            "The network simulation is currently **idle/stopped**. "
-            "Click **Start Simulation** on the top panel to begin traffic generation and monitor real-time QoS metrics.\n\n"
-            f"💡 **Database Note:** SQLite has **{summary_stats.get('total_records', 0)} stored analytics records** from previous runs ready for ML retraining."
+            "Hi! Network monitoring is currently **paused**.\n\n"
+            f"Click **Start Monitoring** above to view live traffic metrics. "
+            f"Your database currently holds **{summary_stats.get('total_records', 0)} snapshots** of previous traffic runs."
         )
 
     # Specific query matching
     if any(k in msg for k in ["why", "drop", "packet loss", "loss", "discard"]):
         if analysis["has_drops"]:
-            lines = ["🚨 **Packet Drop Root Cause Analysis:**"]
+            lines = ["Here's what is causing the dropped packets:\n"]
             for ins in analysis["insights"]:
                 if "dropped" in ins:
                     lines.append(f"- {ins}")
-            lines.append("\n**Actionable Fix:**")
+            lines.append("\n**Suggested Solution:**")
             if strategy == "static":
-                lines.append("1. **Switch to AI-Assisted Dynamic:** The AI engine will proactively predict spikes and transfer bandwidth to prevent buffer overflow.")
-                lines.append("2. **Adjust Manual Static Sliders:** Drag the allocation slider up to provide more headroom for the congested slice.")
+                lines.append("1. **Switch to AI Auto-Balance:** The system will dynamically shift extra bandwidth from idle slices to protect this stream.")
+                lines.append("2. **Raise the manual cap:** Move the slider up for the congested slice by 10-15 Mbps to give it more buffer space.")
             else:
-                lines.append("The allocation engine is actively compensating. You can also trigger an **ML Retrain** so the Decision Tree models learn this burst pattern.")
+                lines.append("The dynamic balancer is actively shifting bandwidth to absorb this load. Retraining the model will help it anticipate this specific surge pattern sooner.")
             return "\n".join(lines)
         else:
             return (
-                "✅ **Zero Packet Drops Detected!**\n\n"
-                "All slices are currently operating within their allocated capacities with 0 dropped packets. "
-                "Packet drops occur when slice throughput exceeds its assigned bandwidth cap (queue overflow). "
-                "To test resilience, try triggering a **Simulated Traffic Spike** (e.g., DoS Attack or 4K Burst) from the Tweaker panel!"
+                "**Zero packet loss detected.**\n\n"
+                "All slices are currently transmitting within their allocated limits with 0 dropped packets. "
+                "Packet loss typically happens when a burst exceeds the assigned slice limit. "
+                "You can test how the balancer handles this by triggering a load surge from the testing panel below."
             )
 
-    if any(k in msg for k in ["latency", "spike", "delay", "ping", "urllc"]):
+    if any(k in msg for k in ["latency", "spike", "delay", "ping", "wifi", "magic", "urllc"]):
         ll_data = analysis["slices"].get("low_latency", {})
         lat = ll_data.get("avg_latency_ms", 0.0)
+        wifi_tag = f" on your **{active_iface}** connection" if mode == "real_network" else ""
         return (
-            f"⏱️ **Real-Time Latency Analysis:**\n\n"
-            f"- **Low-Latency Slice:** `{lat:.2f} ms` (SLA Target: `< 15.0 ms`)\n"
-            f"- **High-Bandwidth Slice:** `{analysis['slices'].get('high_bandwidth', {}).get('avg_latency_ms', 0.0):.2f} ms`\n"
-            f"- **General Slice:** `{analysis['slices'].get('general', {}).get('avg_latency_ms', 0.0):.2f} ms`\n\n"
-            + ("⚠️ *URLLC latency is elevated due to near-capacity queuing delay. Allocating more bandwidth reduces queue build-up immediately.*" if lat > 15 else "🟢 *URLLC latency is within strict ultra-reliable QoS parameters.*")
+            f"**Latency Report{wifi_tag}:**\n\n"
+            f"- **Calls & Gaming (Low-Latency):** `{lat:.1f} ms` (target: < 15 ms)\n"
+            f"- **Streaming & Video:** `{analysis['slices'].get('high_bandwidth', {}).get('avg_latency_ms', 0.0):.1f} ms`\n"
+            f"- **Standard Web:** `{analysis['slices'].get('general', {}).get('avg_latency_ms', 0.0):.1f} ms`\n\n"
+            + ("Latency is slightly elevated due to near-capacity queuing. Allocating an extra 5 Mbps will smooth it out." if lat > 15 else "Your latency is well within optimal targets for smooth gaming and clear voice calls.")
         )
 
-    if any(k in msg for k in ["allocate", "fix", "slider", "capacity", "recommend", "how do i"]):
-        lines = ["🎯 **AI Resource Allocation Recommendations:**\n"]
+    if any(k in msg for k in ["allocate", "fix", "slider", "capacity", "recommend", "how do i", "split"]):
+        lines = ["**Bandwidth Recommendations:**\n"]
         for rec in analysis["recommendations"]:
             lines.append(f"- {rec}")
         if not analysis["recommendations"]:
-            lines.append("- Current allocations are balanced across all slices. No adjustments required.")
-        lines.append(f"\n**Current Strategy:** `{strategy.upper()}`")
-        if strategy == "static":
-            lines.append("Tip: Use the **Interactive Configuration Sliders** to adjust the 100 Mbps pool manually, or switch to **AI-Assisted** for automated proactive reallocation.")
+            lines.append("- Your current bandwidth distribution is balanced nicely across all slices. No adjustments needed.")
+        lines.append(f"\n*Active policy: {strategy.replace('_', ' ').title()}*")
         return "\n".join(lines)
 
     if any(k in msg for k in ["retrain", "ml", "model", "decision tree", "train"]):
         ml = simulation_state.get("ml_engine")
         status = ml.training_info if ml else {}
         return (
-            f"🧠 **Machine Learning Status:**\n\n"
-            f"- **Engine Status:** `{status.get('status', 'Initialized')}`\n"
-            f"- **Samples Trained:** `{status.get('sample_count', 0)}`\n"
-            f"- **Stored DB Snapshots:** `{summary_stats.get('total_records', 0)}` records available in SQLite\n\n"
-            "Click the **Retrain AI Model** button in the dashboard header to update the Decision Tree regressors using the latest traffic history!"
+            f"**Allocation Model Status:**\n\n"
+            f"- **Status:** `{status.get('status', 'Ready')}`\n"
+            f"- **Trained Snapshots:** `{status.get('sample_count', 0)}` records\n"
+            f"- **Total Database History:** `{summary_stats.get('total_records', 0)}` snapshots stored in SQLite\n\n"
+            "You can click **Retrain Model** in the top header whenever you want the decision tree to learn from recent traffic patterns."
         )
 
-    if any(k in msg for k in ["status", "health", "overview", "summary", "report"]):
+    if any(k in msg for k in ["status", "health", "overview", "summary", "report", "how is"]):
         ll_u = analysis["slices"].get("low_latency", {}).get("utilization", 0.0)
         hb_u = analysis["slices"].get("high_bandwidth", {}).get("utilization", 0.0)
         gen_u = analysis["slices"].get("general", {}).get("utilization", 0.0)
+        wifi_tag = f" on **{active_iface}**" if mode == "real_network" else ""
         return (
-            f"📊 **Network Health Summary:**\n\n"
-            f"- **Active Strategy:** `{strategy.upper()}`\n"
-            f"- **Low-Latency Utilization:** `{ll_u:.1f}%` ({analysis['slices'].get('low_latency',{}).get('throughput_mbps',0):.1f}/{analysis['slices'].get('low_latency',{}).get('allocated_bandwidth',0)} Mbps)\n"
-            f"- **High-Bandwidth Utilization:** `{hb_u:.1f}%` ({analysis['slices'].get('high_bandwidth',{}).get('throughput_mbps',0):.1f}/{analysis['slices'].get('high_bandwidth',{}).get('allocated_bandwidth',0)} Mbps)\n"
-            f"- **General Purpose Utilization:** `{gen_u:.1f}%` ({analysis['slices'].get('general',{}).get('throughput_mbps',0):.1f}/{analysis['slices'].get('general',{}).get('allocated_bandwidth',0)} Mbps)\n"
-            f"- **SQLite Log Entries:** `{summary_stats.get('total_records', 0)}` logged\n"
-            f"- **Total Historical QoS Violations:** `{summary_stats.get('qos_violations', 0)}`\n\n"
-            + ("⚠️ *SLA alerts are present. Check recommendations.*" if analysis["has_drops"] or analysis["has_congestion"] else "🟢 *Network health is nominal. All QoS guarantees are satisfied.*")
+            f"**Network Overview{wifi_tag}:**\n\n"
+            f"- **Calls & Gaming:** `{ll_u:.0f}%` load ({analysis['slices'].get('low_latency',{}).get('throughput_mbps',0):.1f} / {analysis['slices'].get('low_latency',{}).get('allocated_bandwidth',0)} Mbps)\n"
+            f"- **Streaming & Video:** `{hb_u:.0f}%` load ({analysis['slices'].get('high_bandwidth',{}).get('throughput_mbps',0):.1f} / {analysis['slices'].get('high_bandwidth',{}).get('allocated_bandwidth',0)} Mbps)\n"
+            f"- **General Web:** `{gen_u:.0f}%` load ({analysis['slices'].get('general',{}).get('throughput_mbps',0):.1f} / {analysis['slices'].get('general',{}).get('allocated_bandwidth',0)} Mbps)\n\n"
+            + ("Some slices are experiencing high traffic. Check the recommendations tab." if analysis["has_drops"] or analysis["has_congestion"] else "Everything is operating cleanly within normal performance targets.")
         )
 
-    # General fallback contextual answer
+    # General friendly fallback
     return (
-        f"🤖 **NetSlice AI Assistant Response:**\n\n"
-        f"I analyzed the live telemetry and SQLite database logs under **{strategy.upper()}** mode:\n"
-        f"- **Low-Latency Slice:** {analysis['slices'].get('low_latency',{}).get('throughput_mbps',0):.1f} Mbps | {analysis['slices'].get('low_latency',{}).get('utilization',0):.1f}% util | {analysis['slices'].get('low_latency',{}).get('packets_dropped',0)} drops\n"
-        f"- **High-Bandwidth Slice:** {analysis['slices'].get('high_bandwidth',{}).get('throughput_mbps',0):.1f} Mbps | {analysis['slices'].get('high_bandwidth',{}).get('utilization',0):.1f}% util | {analysis['slices'].get('high_bandwidth',{}).get('packets_dropped',0)} drops\n"
-        f"- **General Slice:** {analysis['slices'].get('general',{}).get('throughput_mbps',0):.1f} Mbps | {analysis['slices'].get('general',{}).get('utilization',0):.1f}% util | {analysis['slices'].get('general',{}).get('packets_dropped',0)} drops\n\n"
-        f"Ask me questions like:\n"
+        f"**Live Network Summary:**\n\n"
+        f"- **Calls & Gaming:** {analysis['slices'].get('low_latency',{}).get('throughput_mbps',0):.1f} Mbps ({analysis['slices'].get('low_latency',{}).get('utilization',0):.0f}% capacity)\n"
+        f"- **Streaming & Downloads:** {analysis['slices'].get('high_bandwidth',{}).get('throughput_mbps',0):.1f} Mbps ({analysis['slices'].get('high_bandwidth',{}).get('utilization',0):.0f}% capacity)\n"
+        f"- **Standard Web:** {analysis['slices'].get('general',{}).get('throughput_mbps',0):.1f} Mbps ({analysis['slices'].get('general',{}).get('utilization',0):.0f}% capacity)\n\n"
+        f"You can ask me:\n"
+        f"- *'How is my Wi-Fi performing?'*\n"
         f"- *'Why are packets dropping?'*\n"
-        f"- *'How do I fix the bandwidth limit?'*\n"
-        f"- *'Analyze current latency status'* \n"
-        f"- *'How can I retrain the ML model?'*"
+        f"- *'What is the best bandwidth split for streaming?'*\n"
+        f"- *'How do I test a traffic spike?'*"
     )

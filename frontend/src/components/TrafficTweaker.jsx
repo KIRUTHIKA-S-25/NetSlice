@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { 
-  Zap, 
   Film, 
-  Car, 
-  ShieldAlert, 
+  Gamepad2, 
+  Globe, 
   RotateCcw, 
-  Flame, 
   TrendingUp, 
   Activity 
 } from 'lucide-react';
@@ -18,7 +16,7 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
 
   const handleScenario = async (scenarioName, displayName) => {
     if (!isRunning) {
-      setStatusMessage('Please start the simulation first to inject traffic scenarios.');
+      setStatusMessage('Please start monitoring first before injecting test traffic.');
       setTimeout(() => setStatusMessage(null), 3000);
       return;
     }
@@ -32,20 +30,20 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
       const data = await res.json();
       if (data.status === 'success') {
         setActiveScenario(scenarioName);
-        setStatusMessage(`Active Scenario: ${displayName}`);
+        setStatusMessage(`Active test: ${displayName}`);
         if (onTriggerScenario) onTriggerScenario(data);
       }
     } catch (err) {
       console.error(err);
       setStatusMessage('Failed to trigger scenario');
     } finally {
-      setTimeout(() => setStatusMessage(null), 4000);
+      setTimeout(() => setStatusMessage(null), 3500);
     }
   };
 
   const handleCustomSpike = async () => {
     if (!isRunning) {
-      setStatusMessage('Please start the simulation first to inject traffic spikes.');
+      setStatusMessage('Please start monitoring first.');
       setTimeout(() => setStatusMessage(null), 3000);
       return;
     }
@@ -65,185 +63,179 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
       }
     } catch (err) {
       console.error(err);
-      setStatusMessage('Failed to spike traffic');
+      setStatusMessage('Failed to adjust traffic load');
     } finally {
-      setTimeout(() => setStatusMessage(null), 4000);
+      setTimeout(() => setStatusMessage(null), 3500);
     }
   };
 
   return (
-    <div className="glass-card" style={{ padding: '22px 26px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ color: 'var(--accent-amber)' }}>
-            <Flame size={22} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: '700' }}>
-              Traffic Profile Tweaker & Chaos Engine
-            </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Inject realistic traffic surges and attack scenarios to benchmark dynamic reallocation response
-            </p>
-          </div>
+    <div className="glass-card" style={{ padding: '18px 22px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: '#ffffff' }}>
+            Traffic Load Testing
+          </h3>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            Simulate realistic network surges to test how dynamic allocation adapts
+          </p>
         </div>
 
         {statusMessage && (
           <div style={{
-            padding: '5px 12px',
+            padding: '4px 10px',
             borderRadius: '6px',
-            background: 'rgba(245, 158, 11, 0.15)',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            color: 'var(--accent-amber)',
-            fontSize: '0.78rem',
-            fontWeight: '600'
+            backgroundColor: 'var(--status-info-bg)',
+            border: '1px solid rgba(2, 132, 199, 0.3)',
+            color: '#38bdf8',
+            fontSize: '0.76rem',
+            fontWeight: '500'
           }}>
             {statusMessage}
           </div>
         )}
       </div>
 
-      {/* Preset Scenario Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', marginBottom: '18px' }}>
+      {/* Preset Scenario Buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '14px' }}>
         
-        {/* DoS Attack */}
+        {/* 4K Streaming */}
         <button
           className="btn-secondary"
-          onClick={() => handleScenario('dos_attack', 'Simulated DoS Attack (70 Mbps Flood)')}
+          onClick={() => handleScenario('streaming_burst', '4K Streaming Surge (80 Mbps)')}
           style={{
-            padding: '12px',
+            padding: '10px 12px',
             textAlign: 'left',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            borderColor: activeScenario === 'dos_attack' ? 'var(--accent-rose)' : undefined,
-            background: activeScenario === 'dos_attack' ? 'rgba(244, 63, 94, 0.15)' : undefined
+            gap: '4px',
+            borderColor: activeScenario === 'streaming_burst' ? 'var(--slice-high-bandwidth)' : undefined,
+            backgroundColor: activeScenario === 'streaming_burst' ? '#1c1a2e' : undefined
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-rose)' }}>
-            <ShieldAlert size={18} />
-            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Simulate DoS Attack</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--slice-high-bandwidth)' }}>
+            <Film size={16} />
+            <span style={{ fontWeight: '600', fontSize: '0.82rem' }}>4K Video Stream (80M)</span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Floods General slice with 70 Mbps malicious traffic to test isolation.
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            Heavy burst on High-Bandwidth slice.
           </span>
         </button>
 
-        {/* 4K Video Burst */}
+        {/* Gaming & Voice */}
         <button
           className="btn-secondary"
-          onClick={() => handleScenario('streaming_burst', '4K Ultra-HD Video Burst (80 Mbps)')}
+          onClick={() => handleScenario('fleet_surge', 'Gaming & Voice Surge (45 Mbps)')}
           style={{
-            padding: '12px',
+            padding: '10px 12px',
             textAlign: 'left',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            borderColor: activeScenario === 'streaming_burst' ? 'var(--accent-purple)' : undefined,
-            background: activeScenario === 'streaming_burst' ? 'rgba(168, 85, 247, 0.15)' : undefined
+            gap: '4px',
+            borderColor: activeScenario === 'fleet_surge' ? 'var(--slice-low-latency)' : undefined,
+            backgroundColor: activeScenario === 'fleet_surge' ? '#122338' : undefined
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-purple)' }}>
-            <Film size={18} />
-            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Start 4K Streaming Burst</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--slice-low-latency)' }}>
+            <Gamepad2 size={16} />
+            <span style={{ fontWeight: '600', fontSize: '0.82rem' }}>Voice / Gaming Surge (45M)</span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Surges High-Bandwidth slice to 80 Mbps to simulate video streaming spikes.
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            Tests real-time packet prioritization.
           </span>
         </button>
 
-        {/* Autonomous Vehicle Surge */}
+        {/* Heavy Bulk Download */}
         <button
           className="btn-secondary"
-          onClick={() => handleScenario('fleet_surge', 'Autonomous Fleet Surge (45 Mbps URLLC)')}
+          onClick={() => handleScenario('dos_attack', 'Bulk Web Spike (70 Mbps)')}
           style={{
-            padding: '12px',
+            padding: '10px 12px',
             textAlign: 'left',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            borderColor: activeScenario === 'fleet_surge' ? 'var(--accent-cyan)' : undefined,
-            background: activeScenario === 'fleet_surge' ? 'rgba(56, 189, 248, 0.15)' : undefined
+            gap: '4px',
+            borderColor: activeScenario === 'dos_attack' ? '#f87171' : undefined,
+            backgroundColor: activeScenario === 'dos_attack' ? '#291418' : undefined
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)' }}>
-            <Car size={18} />
-            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Autonomous Fleet Surge</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: '#f87171' }}>
+            <Globe size={16} />
+            <span style={{ fontWeight: '600', fontSize: '0.82rem' }}>Heavy Download Spike (70M)</span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Spikes Low-Latency slice to 45 Mbps to test critical URLLC SLA defense.
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            Simulates saturated background downloads.
           </span>
         </button>
 
-        {/* Reset Baseline */}
+        {/* Baseline */}
         <button
           className="btn-secondary"
-          onClick={() => handleScenario('normal_baseline', 'Baseline Traffic')}
+          onClick={() => handleScenario('normal_baseline', 'Normal Traffic Baseline')}
           style={{
-            padding: '12px',
+            padding: '10px 12px',
             textAlign: 'left',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            borderColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'var(--accent-emerald)' : undefined,
-            background: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'rgba(16, 185, 129, 0.15)' : undefined
+            gap: '4px',
+            borderColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'var(--status-success)' : undefined,
+            backgroundColor: activeScenario === 'normal' || activeScenario === 'normal_baseline' ? 'rgba(16, 185, 129, 0.08)' : undefined
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-emerald)' }}>
-            <RotateCcw size={18} />
-            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Reset Baseline</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--status-success)' }}>
+            <RotateCcw size={16} />
+            <span style={{ fontWeight: '600', fontSize: '0.82rem' }}>Normal Activity</span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Restores standard baseline demands (LL: 10M, HB: 30M, Gen: 10M).
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            Resets to standard traffic levels.
           </span>
         </button>
 
       </div>
 
-      {/* Granular Slice Spiker */}
+      {/* Granular Spike Controls */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        background: 'rgba(0,0,0,0.25)',
-        padding: '12px 16px',
-        borderRadius: '10px',
-        border: '1px solid var(--border-subtle)',
+        gap: '10px',
+        backgroundColor: '#0c101c',
+        padding: '10px 14px',
+        borderRadius: '8px',
+        border: '1px solid #1e2638',
         flexWrap: 'wrap'
       }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <TrendingUp size={16} color="var(--accent-cyan)" /> Granular Slice Spiker:
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Activity size={14} /> Custom Slice Load:
         </span>
 
         <select
           value={selectedSlice}
           onChange={(e) => setSelectedSlice(e.target.value)}
           style={{
-            background: 'var(--bg-dark)',
-            color: 'white',
-            border: '1px solid var(--border-subtle)',
-            padding: '6px 12px',
+            backgroundColor: '#161f33',
+            color: '#ffffff',
+            border: '1px solid var(--border-card)',
+            padding: '5px 10px',
             borderRadius: '6px',
-            fontSize: '0.8rem'
+            fontSize: '0.78rem'
           }}
         >
-          <option value="low_latency">Low-Latency Slice</option>
-          <option value="high_bandwidth">High-Bandwidth Slice</option>
-          <option value="general">General-Purpose Slice</option>
+          <option value="low_latency">Low-Latency (Calls & Gaming)</option>
+          <option value="high_bandwidth">High-Bandwidth (Streaming)</option>
+          <option value="general">Standard Traffic (Web)</option>
         </select>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Multiplier:</span>
-          {[1.5, 2.0, 2.5, 3.5].map((m) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {[1.5, 2.0, 3.0].map((m) => (
             <button
               key={m}
               className="btn-secondary"
               onClick={() => setMultiplier(m)}
               style={{
                 padding: '4px 8px',
-                fontSize: '0.75rem',
-                borderColor: multiplier === m ? 'var(--accent-cyan)' : undefined,
-                background: multiplier === m ? 'rgba(56, 189, 248, 0.2)' : undefined
+                fontSize: '0.74rem',
+                borderColor: multiplier === m ? 'var(--accent-primary)' : undefined,
+                backgroundColor: multiplier === m ? '#1e293b' : undefined
               }}
             >
               {m}x
@@ -254,9 +246,9 @@ const TrafficTweaker = ({ isRunning, onTriggerScenario }) => {
         <button
           className="btn-primary"
           onClick={handleCustomSpike}
-          style={{ padding: '6px 14px', fontSize: '0.8rem', marginLeft: 'auto' }}
+          style={{ padding: '5px 12px', fontSize: '0.78rem', marginLeft: 'auto' }}
         >
-          <Flame size={14} /> Inject Spike ({multiplier}x)
+          Apply Spike ({multiplier}x)
         </button>
       </div>
     </div>

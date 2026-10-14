@@ -163,8 +163,25 @@ const Dashboard = () => {
   };
 
   // Handle Strategy Change
-  const handleStrategyChange = (newStrategy) => {
+  const handleStrategyChange = async (newStrategy) => {
     setStrategy(newStrategy);
+    try {
+      const res = await fetch(`${API_BASE}/api/strategy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategy: newStrategy })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setBannerAlert({ 
+          type: 'info', 
+          text: `Resource allocation strategy changed to ${newStrategy.toUpperCase().replace('_', ' ')}` 
+        });
+        setTimeout(() => setBannerAlert(null), 3000);
+      }
+    } catch (e) {
+      console.error('Error changing strategy:', e);
+    }
   };
 
   // Start Simulation or Real Network

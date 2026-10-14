@@ -111,8 +111,26 @@ class StaticAllocationPayload(BaseModel):
     high_bandwidth: float
     general: float
 
+class StrategyPayload(BaseModel):
+    strategy: str
+
 class ChatPayload(BaseModel):
     message: str
+
+@app.post("/api/strategy")
+def set_strategy(payload: StrategyPayload):
+    valid = ["static", "rule_based", "ai_assisted"]
+    if payload.strategy not in valid:
+        return {"status": "error", "message": f"Strategy must be one of {valid}"}
+    simulation_state["strategy"] = payload.strategy
+    if payload.strategy == "static" and simulation_state["allocation_engine"]:
+        simulation_state["allocation_engine"].allocate_static()
+    save_action_log(
+        "network_logs.db",
+        "STRATEGY",
+        f"Active slicing resource allocation strategy switched to: {payload.strategy.upper().replace('_', ' ')}"
+    )
+    return {"status": "success", "strategy": simulation_state["strategy"]}
 
 @app.get("/api/status")
 def get_system_status():
@@ -169,7 +187,7 @@ def set_network_mode(payload: ModePayload):
 @app.post("/api/start")
 def start_simulation(payload: ConfigPayload):
     if simulation_state["is_running"]:
-        return {"status": "error", "message": "Engine is already running"}
+        stop_simulation()
         
     simulation_state["strategy"] = payload.strategy
     simulation_state["mode"] = payload.mode or "simulation"

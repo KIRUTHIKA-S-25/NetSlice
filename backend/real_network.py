@@ -11,22 +11,35 @@ import re
 def get_wifi_details() -> Dict:
     """
     Extracts SSID name, Signal strength, and Tx/Rx rate from Windows WLAN API.
+    Accurately detects disconnected or disabled wireless interfaces.
     """
     try:
         out = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], text=True, stderr=subprocess.DEVNULL)
+        state_match = re.search(r"^\s*State\s*:\s*(.+)$", out, re.MULTILINE)
+        state = state_match.group(1).strip().lower() if state_match else "disconnected"
+
+        if "disconnected" in state or state != "connected":
+            return {
+                "ssid": None,
+                "signal": "0%",
+                "rx_rate": "0",
+                "tx_rate": "0",
+                "band": "N/A",
+                "state": "disconnected",
+                "is_connected": False
+            }
+
         ssid_match = re.search(r"^\s*SSID\s*:\s*(.+)$", out, re.MULTILINE)
         signal_match = re.search(r"^\s*Signal\s*:\s*(.+)$", out, re.MULTILINE)
         rx_match = re.search(r"^\s*Receive rate \(Mbps\)\s*:\s*(.+)$", out, re.MULTILINE)
         tx_match = re.search(r"^\s*Transmit rate \(Mbps\)\s*:\s*(.+)$", out, re.MULTILINE)
         band_match = re.search(r"^\s*Band\s*:\s*(.+)$", out, re.MULTILINE)
-        state_match = re.search(r"^\s*State\s*:\s*(.+)$", out, re.MULTILINE)
-        
+
         ssid = ssid_match.group(1).strip() if ssid_match else None
-        signal = signal_match.group(1).strip() if signal_match else "90%"
-        rx_rate = rx_match.group(1).strip() if rx_match else "144.4"
-        tx_rate = tx_match.group(1).strip() if tx_match else "144.4"
-        band = band_match.group(1).strip() if band_match else "5 GHz"
-        state = state_match.group(1).strip() if state_match else "connected"
+        signal = signal_match.group(1).strip() if signal_match else "0%"
+        rx_rate = rx_match.group(1).strip() if rx_match else "0"
+        tx_rate = tx_match.group(1).strip() if tx_match else "0"
+        band = band_match.group(1).strip() if band_match else "N/A"
 
         if ssid and ssid != "":
             return {
@@ -35,12 +48,21 @@ def get_wifi_details() -> Dict:
                 "rx_rate": rx_rate,
                 "tx_rate": tx_rate,
                 "band": band,
-                "state": state
+                "state": "connected",
+                "is_connected": True
             }
     except Exception:
         pass
-        
-    return {"ssid": "Wi-Fi", "signal": "90%", "rx_rate": "144.4", "tx_rate": "144.4", "band": "5 GHz", "state": "connected"}
+
+    return {
+        "ssid": None,
+        "signal": "0%",
+        "rx_rate": "0",
+        "tx_rate": "0",
+        "band": "N/A",
+        "state": "disconnected",
+        "is_connected": False
+    }
 
 def get_available_interfaces() -> List[Dict]:
     """
@@ -65,7 +87,7 @@ def get_available_interfaces() -> List[Dict]:
         is_wifi = "Wi-Fi" in iface_name or "Wireless" in iface_name or "WLAN" in iface_name
 
         has_lan_ip = any(ip.startswith("192.168.") or ip.startswith("10.") for ip in ipv4_list)
-        is_default = (is_wifi and is_up and has_lan_ip)
+        is_default = (is_wifi and is_up and has_lan_ip and wifi_info.get("is_connected", False))
 
         interfaces.append({
             "name": iface_name,
@@ -77,29 +99,36 @@ def get_available_interfaces() -> List[Dict]:
             "bytes_recv": io.bytes_recv if io else 0,
             "packets_dropped": (io.dropin + io.dropout) if io else 0,
             "is_default": is_default,
-            "wifi_details": wifi_info if (is_wifi or is_default) else None
+            "wifi_details": wifi_info if is_wifi else None
         })
 
     # Sort so active Wi-Fi or default interface is first in the list
     interfaces.sort(key=lambda x: (not x.get("is_default", False), not ("Wi-Fi" in x["name"])))
     return interfaces
 
-def measure_real_network_latency(target_hosts=None) -> float:
+def measure_real_network_latency(target_hosts=None) -> Optional[float]:
     """
     Measures true round-trip time (RTT in ms) to live Internet endpoints (Google/Cloudflare DNS)
     via fast non-blocking TCP socket handshake.
+    Returns None if all endpoints are unreachable (internet disconnected).
     """
     if target_hosts is None:
-        target_hosts = [("8.8.8.8", 443), ("1.1.1.1", 443), ("1.0.0.1", 443)]
+        target_hosts = [
+            ("8.8.8.8", 53),
+            ("1.1.1.1", 53),
+            ("8.8.4.4", 53),
+            ("1.0.0.1", 53),
+            ("208.67.222.222", 53)
+        ]
         
     for host, port in target_hosts:
         t0 = time.perf_counter()
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.4)
+        s.settimeout(0.35)
         try:
             s.connect((host, port))
             rtt_ms = (time.perf_counter() - t0) * 1000.0
-            return max(1.5, round(rtt_ms, 2))
+            return max(1.0, round(rtt_ms, 2))
         except Exception:
             continue
         finally:
@@ -108,9 +137,7 @@ def measure_real_network_latency(target_hosts=None) -> float:
             except Exception:
                 pass
 
-    # Dynamic fallback based on slight load variation
-    import random
-    return round(18.0 + random.uniform(0.5, 4.5), 2)
+    return None
 
 class TokenBucketShaper:
     """
@@ -218,6 +245,12 @@ class RealNetworkManager:
             "general": 9_000_000          # 9 Mbps baseline
         }
 
+        # Online & Connectivity state
+        self.is_online = True
+        self.last_online_state = True
+        self.simulate_disconnect = False
+        self.last_wifi_check = initial_wifi
+
         # Sockets
         self.udp_sock = None
         self.tcp_server_sock = None
@@ -226,6 +259,19 @@ class RealNetworkManager:
         
         if self.current_ssid:
             self.on_network_handover(initial_wifi)
+
+    def toggle_simulated_disconnect(self, simulate: Optional[bool] = None) -> bool:
+        """Allows toggling simulated network disconnection for testing & evaluation."""
+        if simulate is not None:
+            self.simulate_disconnect = simulate
+        else:
+            self.simulate_disconnect = not self.simulate_disconnect
+        save_action_log(
+            self.db_path,
+            "ADMIN",
+            f"Simulated network disconnection: {'ENABLED (Simulating offline)' if self.simulate_disconnect else 'DISABLED (Live internet detection)'}"
+        )
+        return self.simulate_disconnect
 
     def set_allocation_engine(self, engine):
         self.allocation_engine = engine
@@ -373,28 +419,29 @@ class RealNetworkManager:
     def _traffic_worker_loop(self):
         """
         Generates real network packet transmissions over local sockets every 100ms,
-        flowing through the token bucket rate limiter to reflect true network throttling.
+        flowing through the token bucket rate limiter. Automatically pauses when offline.
         """
         payload_1k = b"X" * 1400 # ~1.4 KB standard MTU payload
         import random
         while self.is_running:
             try:
+                if not self.is_online:
+                    # Paused when internet / Wi-Fi is disconnected
+                    time.sleep(0.2)
+                    continue
+
                 for key, net_slice in self.slices.items():
                     demand_bps = self.traffic_profiles.get(key, 10_000_000)
-                    # Introduce natural micro-jitter in transmission rate (±5%)
                     jittered_demand = demand_bps * random.uniform(0.95, 1.05)
                     bytes_per_100ms = (jittered_demand / 8.0) / 10.0
                     num_packets = max(1, int(bytes_per_100ms / len(payload_1k)))
 
-                    # Real round trip time estimate for interval
                     slice_latency = 5.0
 
-                    # Transmit real packets through shaper
                     for _ in range(num_packets):
                         allowed = net_slice.transmit(payload_1k, slice_latency)
                         if allowed and self.udp_sock:
                             try:
-                                # Send real UDP packet to slice port on localhost
                                 self.udp_sock.sendto(b"S", ("127.0.0.1", net_slice.port))
                             except Exception:
                                 pass
@@ -407,6 +454,7 @@ class RealNetworkManager:
         """
         Collects real-time 1-second snapshots from the real physical network adapter,
         live TCP RTT ping probes, and saves them to SQLite database.
+        Immediately zeroes metrics and raises disconnect events when internet is offline.
         """
         import random
         handover_check_counter = 0
@@ -414,15 +462,79 @@ class RealNetworkManager:
         while self.is_running:
             time.sleep(1.0)
             timestamp = time.time()
-            snapshot = {"timestamp": timestamp, "slices": {}}
+            snapshot = {
+                "timestamp": timestamp, 
+                "slices": {},
+                "is_online": True,
+                "active_ssid": None,
+                "signal": "0%",
+                "live_rtt": 0.0
+            }
 
-            # Check for Wi-Fi SSID handover every 2 seconds
+            # Check Wi-Fi state & SSID
             handover_check_counter += 1
+            wifi_check = get_wifi_details() if handover_check_counter >= 2 else (self.last_wifi_check or get_wifi_details())
             if handover_check_counter >= 2:
                 handover_check_counter = 0
-                wifi_check = get_wifi_details()
-                detected_ssid = wifi_check.get("ssid")
-                if detected_ssid and detected_ssid != "Wi-Fi" and detected_ssid != self.current_ssid:
+                self.last_wifi_check = wifi_check
+
+            detected_ssid = wifi_check.get("ssid")
+
+            # Check real live Internet TCP RTT
+            if self.simulate_disconnect:
+                live_rtt = None
+                is_online = False
+            else:
+                live_rtt = measure_real_network_latency()
+                # Online if Internet endpoint responds or Wi-Fi is actively connected
+                is_online = (live_rtt is not None)
+
+            # Detect state transition (ONLINE <-> OFFLINE)
+            if self.last_online_state and not is_online:
+                self.is_online = False
+                self.last_online_state = False
+                save_action_log(
+                    self.db_path,
+                    "DISCONNECT",
+                    "[NETWORK DISCONNECTED] Internet / Wi-Fi disconnected! Real telemetry halted, slice throughput at 0 Mbps."
+                )
+            elif not self.last_online_state and is_online:
+                self.is_online = True
+                self.last_online_state = True
+                ssid_label = detected_ssid or "Active Interface"
+                save_action_log(
+                    self.db_path,
+                    "CONNECT",
+                    f"[NETWORK RESTORED] Connected to '{ssid_label}' (RTT: {live_rtt} ms, Signal: {wifi_check.get('signal')}). Resuming slice telemetry."
+                )
+
+            self.is_online = is_online
+            snapshot["is_online"] = is_online
+            snapshot["active_ssid"] = detected_ssid if is_online else "Disconnected"
+            snapshot["signal"] = wifi_check.get("signal", "0%") if is_online else "0%"
+            snapshot["live_rtt"] = live_rtt if (is_online and live_rtt is not None) else 0.0
+
+            if not is_online:
+                # ZERO OUT ALL METRICS WHEN DISCONNECTED
+                for key, net_slice in self.slices.items():
+                    net_slice.current_usage = 0.0
+                    slice_info = {
+                        "slice_name": key,
+                        "allocated_bandwidth": net_slice.allocated_bandwidth,
+                        "throughput_mbps": 0.0,
+                        "packets_processed": net_slice.packets_processed,
+                        "packets_dropped": 0,
+                        "avg_latency": 0.0,
+                        "avg_latency_ms": 0.0,
+                        "utilization": 0.0,
+                        "real_port": net_slice.port,
+                        "status": "disconnected"
+                    }
+                    snapshot["slices"][key] = slice_info
+                    net_slice.reset_interval()
+            else:
+                # Handover detection when online
+                if detected_ssid and detected_ssid != self.current_ssid:
                     old_ssid = self.current_ssid or "Initial"
                     self.current_ssid = detected_ssid
                     save_action_log(
@@ -433,89 +545,76 @@ class RealNetworkManager:
                     )
                     self.on_network_handover(wifi_check)
 
-            # Sample physical adapter IO counters from psutil
-            curr_time = time.time()
-            elapsed = max(0.5, curr_time - self.last_io_time)
-            self.last_io_time = curr_time
+                # Sample physical adapter IO counters from psutil
+                curr_time = time.time()
+                elapsed = max(0.5, curr_time - self.last_io_time)
+                self.last_io_time = curr_time
 
-            io_counters = psutil.net_io_counters(pernic=True)
-            io_stats = io_counters.get(self.interface_name)
-            if not io_stats:
-                # Find any active Wi-Fi or connected primary interface
-                for if_key, if_io in io_counters.items():
-                    if ("Wi-Fi" in if_key or "Wireless" in if_key) and (if_io.bytes_recv > 0 or if_io.bytes_sent > 0):
-                        io_stats = if_io
-                        self.interface_name = if_key
-                        break
+                io_counters = psutil.net_io_counters(pernic=True)
+                io_stats = io_counters.get(self.interface_name)
+                if not io_stats:
+                    for if_key, if_io in io_counters.items():
+                        if ("Wi-Fi" in if_key or "Wireless" in if_key) and (if_io.bytes_recv > 0 or if_io.bytes_sent > 0):
+                            io_stats = if_io
+                            self.interface_name = if_key
+                            break
 
-            phy_delta_bytes = 0
-            os_drops = 0
-            if io_stats:
-                os_drops = (io_stats.dropin + io_stats.dropout)
-                if self.last_io_stats:
-                    d_recv = max(0, io_stats.bytes_recv - self.last_io_stats.bytes_recv)
-                    d_sent = max(0, io_stats.bytes_sent - self.last_io_stats.bytes_sent)
-                    phy_delta_bytes = d_recv + d_sent
-                self.last_io_stats = io_stats
+                phy_delta_bytes = 0
+                if io_stats:
+                    if self.last_io_stats:
+                        d_recv = max(0, io_stats.bytes_recv - self.last_io_stats.bytes_recv)
+                        d_sent = max(0, io_stats.bytes_sent - self.last_io_stats.bytes_sent)
+                        phy_delta_bytes = d_recv + d_sent
+                    self.last_io_stats = io_stats
 
-            # Real physical throughput in Mbps
-            phy_mbps = (phy_delta_bytes * 8.0) / (elapsed * 1_000_000.0)
+                phy_mbps = (phy_delta_bytes * 8.0) / (elapsed * 1_000_000.0)
 
-            # Measure true live Internet TCP RTT latency
-            live_rtt = measure_real_network_latency()
+                for key, net_slice in self.slices.items():
+                    socket_mbps = net_slice.current_usage / 1_000_000.0
+                    
+                    if key == "high_bandwidth":
+                        extra_mbps = phy_mbps * 0.65
+                        slice_latency = max(2.5, round(live_rtt * 1.35 + random.uniform(-0.5, 1.2), 1))
+                    elif key == "low_latency":
+                        extra_mbps = phy_mbps * 0.15
+                        slice_latency = max(1.0, round(live_rtt * 0.65 + random.uniform(-0.3, 0.4), 1))
+                    else:
+                        extra_mbps = phy_mbps * 0.20
+                        slice_latency = max(1.8, round(live_rtt * 1.05 + random.uniform(-0.4, 0.8), 1))
 
-            for key, net_slice in self.slices.items():
-                # Combine synthetic socket throughput with real physical OS Wi-Fi traffic
-                socket_mbps = net_slice.current_usage / 1_000_000.0
-                
-                # Distribute real physical throughput across slices
-                if key == "high_bandwidth":
-                    # eMBB absorbs bulk download/streaming traffic (65%)
-                    extra_mbps = phy_mbps * 0.65
-                    slice_latency = max(2.5, round(live_rtt * 1.35 + random.uniform(-0.5, 1.2), 1))
-                elif key == "low_latency":
-                    # URLLC prioritised low latency queue (15%)
-                    extra_mbps = phy_mbps * 0.15
-                    slice_latency = max(1.0, round(live_rtt * 0.65 + random.uniform(-0.3, 0.4), 1))
-                else:
-                    # General mMTC web traffic (20%)
-                    extra_mbps = phy_mbps * 0.20
-                    slice_latency = max(1.8, round(live_rtt * 1.05 + random.uniform(-0.4, 0.8), 1))
+                    micro_jitter = random.uniform(-0.3, 0.4)
+                    throughput_mbps = max(0.2, round(socket_mbps + extra_mbps + micro_jitter, 1))
 
-                # Natural dynamic micro-variation for live feel
-                micro_jitter = random.uniform(-0.3, 0.4)
-                throughput_mbps = max(0.2, round(socket_mbps + extra_mbps + micro_jitter, 1))
+                    if throughput_mbps > net_slice.allocated_bandwidth:
+                        excess_drops = int((throughput_mbps - net_slice.allocated_bandwidth) * 12)
+                        net_slice.packets_dropped += excess_drops
+                        throughput_mbps = round(net_slice.allocated_bandwidth * random.uniform(0.97, 1.0), 1)
 
-                # Cap throughput at allocated bandwidth if shaper throttles
-                if throughput_mbps > net_slice.allocated_bandwidth:
-                    excess_drops = int((throughput_mbps - net_slice.allocated_bandwidth) * 12)
-                    net_slice.packets_dropped += excess_drops
-                    throughput_mbps = round(net_slice.allocated_bandwidth * random.uniform(0.97, 1.0), 1)
+                    utilization = round((throughput_mbps / net_slice.allocated_bandwidth) * 100, 1) if net_slice.allocated_bandwidth > 0 else 100.0
+                    total_drops = net_slice.packets_dropped
 
-                utilization = round((throughput_mbps / net_slice.allocated_bandwidth) * 100, 1) if net_slice.allocated_bandwidth > 0 else 100.0
-                total_drops = net_slice.packets_dropped
+                    slice_info = {
+                        "slice_name": key,
+                        "allocated_bandwidth": net_slice.allocated_bandwidth,
+                        "throughput_mbps": throughput_mbps,
+                        "packets_processed": net_slice.packets_processed + int(throughput_mbps * 25),
+                        "packets_dropped": total_drops,
+                        "avg_latency": slice_latency / 1000.0,
+                        "avg_latency_ms": slice_latency,
+                        "utilization": utilization,
+                        "real_port": net_slice.port,
+                        "status": "connected"
+                    }
+                    snapshot["slices"][key] = slice_info
 
-                slice_info = {
-                    "slice_name": key,
-                    "allocated_bandwidth": net_slice.allocated_bandwidth,
-                    "throughput_mbps": throughput_mbps,
-                    "packets_processed": net_slice.packets_processed + int(throughput_mbps * 25),
-                    "packets_dropped": total_drops,
-                    "avg_latency": slice_latency / 1000.0,
-                    "avg_latency_ms": slice_latency,
-                    "utilization": utilization,
-                    "real_port": net_slice.port
-                }
-                snapshot["slices"][key] = slice_info
+                    if total_drops > 0:
+                        save_action_log(
+                            self.db_path,
+                            "WARNING",
+                            f"[REAL-NET QoS] {net_slice.name} dropped {total_drops} real packets on Port {net_slice.port}! Utilization={utilization:.1f}%"
+                        )
 
-                if total_drops > 0:
-                    save_action_log(
-                        self.db_path,
-                        "WARNING",
-                        f"[REAL-NET QoS] {net_slice.name} dropped {total_drops} real packets on Port {net_slice.port}! Utilization={utilization:.1f}%"
-                    )
-
-                net_slice.reset_interval()
+                    net_slice.reset_interval()
 
             self.metrics_history.append(snapshot)
             if len(self.metrics_history) > 60:

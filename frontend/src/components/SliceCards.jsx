@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Wifi, Activity, AlertCircle, CheckCircle, Video, Gamepad2, Globe } from 'lucide-react';
+import { Zap, Wifi, WifiOff, Activity, AlertCircle, CheckCircle, Video, Gamepad2, Globe } from 'lucide-react';
 
 const sliceConfig = {
   low_latency: {
@@ -25,7 +25,7 @@ const sliceConfig = {
   }
 };
 
-const SliceCards = ({ metrics, allocations }) => {
+const SliceCards = ({ metrics, allocations, isOnline = true }) => {
   if (!metrics) {
     return (
       <div className="glass-card" style={{ padding: '28px', textAlign: 'center', marginBottom: '20px' }}>
@@ -103,7 +103,11 @@ const SliceCards = ({ metrics, allocations }) => {
                 </div>
               </div>
 
-              {isHealthy ? (
+              {!isOnline ? (
+                <span className="badge badge-rose" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <WifiOff size={12} /> Offline
+                </span>
+              ) : isHealthy ? (
                 <span className="badge badge-emerald" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <CheckCircle size={12} /> Healthy
                 </span>
@@ -164,9 +168,9 @@ const SliceCards = ({ metrics, allocations }) => {
                 <div style={{ 
                   fontSize: '0.95rem', 
                   fontWeight: '600',
-                  color: hasLatencySpike ? 'var(--status-danger)' : 'var(--text-primary)'
+                  color: !isOnline ? 'var(--text-muted)' : (hasLatencySpike ? 'var(--status-danger)' : 'var(--text-primary)')
                 }}>
-                  {latencyMs.toFixed(1)} ms
+                  {isOnline ? `${latencyMs.toFixed(1)} ms` : 'Offline'}
                 </div>
               </div>
 

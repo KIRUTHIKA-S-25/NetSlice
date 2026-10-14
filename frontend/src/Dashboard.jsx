@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [isProtocolsOpen, setIsProtocolsOpen] = useState(false);
   const [totalSnapshots, setTotalSnapshots] = useState(0);
   const [bannerAlert, setBannerAlert] = useState(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -47,6 +48,7 @@ const Dashboard = () => {
       const res = await fetch(`${API_BASE}/api/status`);
       const data = await res.json();
       setIsRunning(data.is_running);
+      if (data.is_online !== undefined) setIsOnline(data.is_online);
       setStrategy(data.strategy);
       if (data.mode) setMode(data.mode);
       if (data.active_interface) setActiveInterface(data.active_interface);
@@ -100,6 +102,7 @@ const Dashboard = () => {
         const data = await res.json();
         
         if (data.status === 'active' && data.data) {
+          if (data.is_online !== undefined) setIsOnline(data.is_online);
           setMetrics(data.data.slices);
           setHistory(data.history || []);
           if (data.allocations) setAllocations(data.allocations);
@@ -109,6 +112,7 @@ const Dashboard = () => {
           if (data.interface) setActiveInterface(data.interface);
           setIsRunning(true);
         } else if (data.status === 'idle') {
+          if (data.is_online !== undefined) setIsOnline(data.is_online);
           if (data.logs) setLogs(data.logs);
           if (data.ml_info) setMlInfo(data.ml_info);
           if (data.mode) setMode(data.mode);
@@ -241,6 +245,7 @@ const Dashboard = () => {
       {/* Top Navigation Bar */}
       <Navbar
         isRunning={isRunning}
+        isOnline={isOnline}
         strategy={strategy}
         onStrategyChange={handleStrategyChange}
         mode={mode}
@@ -299,10 +304,39 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Offline Alert Banner */}
+      {!isOnline && mode === 'real_network' && (
+        <div className="glass-card" style={{
+          padding: '14px 20px',
+          marginBottom: '20px',
+          borderLeft: '4px solid var(--accent-rose)',
+          backgroundColor: 'rgba(244, 63, 94, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: '700', color: 'var(--accent-rose)', fontSize: '0.9rem' }}>
+                Physical Network Disconnected
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
+                No active internet or Wi-Fi connection detected. Real physical telemetry and slice traffic are halted (0.0 Mbps).
+              </div>
+            </div>
+          </div>
+          <span className="badge badge-rose" style={{ fontWeight: '700' }}>0.0 Mbps / Offline</span>
+        </div>
+      )}
+
       {/* 1. Real-Time Slice Telemetry Cards */}
       <SliceCards 
         metrics={metrics} 
         allocations={allocations} 
+        isOnline={isOnline}
       />
 
       {/* 2. Interactive Configuration Sliders (100 Mbps Pool Allocation) */}

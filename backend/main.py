@@ -122,8 +122,17 @@ def get_system_status():
         wifi_match = next((i for i in interfaces if i.get("wifi_details") or "Wi-Fi" in i["name"]), interfaces[0])
         current_iface = wifi_match["name"]
         simulation_state["active_interface"] = current_iface
+        
+    is_real = simulation_state["mode"] == "real_network"
+    is_online = (
+        simulation_state["real_net_mgr"].is_online
+        if (is_real and simulation_state["real_net_mgr"])
+        else True
+    )
+
     return {
         "is_running": simulation_state["is_running"],
+        "is_online": is_online,
         "strategy": simulation_state["strategy"],
         "mode": simulation_state["mode"],
         "active_interface": current_iface,
@@ -250,10 +259,16 @@ def get_metrics():
         if is_real and simulation_state["real_net_mgr"] 
         else (simulation_state["monitor"].metrics_history if simulation_state["monitor"] else [])
     )
+    is_online = (
+        simulation_state["real_net_mgr"].is_online
+        if is_real and simulation_state["real_net_mgr"]
+        else True
+    )
 
     if not simulation_state["is_running"] or not history_source:
         return {
             "status": "idle",
+            "is_online": is_online,
             "data": None,
             "history": [],
             "logs": get_action_logs("network_logs.db", limit=25),
@@ -268,7 +283,7 @@ def get_metrics():
     strategy = simulation_state["strategy"]
     engine = simulation_state["allocation_engine"]
     
-    if engine:
+    if engine and is_online:
         if strategy == "static":
             engine.allocate_static()
         elif strategy == "rule_based":
@@ -289,6 +304,7 @@ def get_metrics():
         
     return {
         "status": "active",
+        "is_online": is_online,
         "data": latest,
         "history": history,
         "allocations": allocations,
@@ -298,6 +314,18 @@ def get_metrics():
         "logs": action_logs,
         "ml_info": simulation_state["ml_engine"].training_info
     }
+
+@app.post("/api/network/simulate-disconnect")
+def toggle_simulate_disconnect(payload: Optional[Dict] = None):
+    simulate = payload.get("simulate") if payload else None
+    if simulation_state["real_net_mgr"]:
+        res = simulation_state["real_net_mgr"].toggle_simulated_disconnect(simulate)
+        return {
+            "status": "success",
+            "simulated_disconnect": res,
+            "is_online": simulation_state["real_net_mgr"].is_online
+        }
+    return {"status": "error", "message": "Real network manager not active"}
 
 @app.get("/api/history")
 def get_history(limit: int = Query(60, ge=1, le=500), slice_name: Optional[str] = None):

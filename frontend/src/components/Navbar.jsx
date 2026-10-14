@@ -6,12 +6,14 @@ import {
   Database, 
   Cpu, 
   Wifi,
+  WifiOff,
   Sliders,
   CheckCircle2
 } from 'lucide-react';
 
 const Navbar = ({
   isRunning,
+  isOnline = true,
   strategy,
   onStrategyChange,
   mode = 'real_network',
@@ -31,14 +33,14 @@ const Navbar = ({
   totalSnapshots
 }) => {
   // Accurately resolve active Wi-Fi interface and SSID
-  const currentIfaceObj = interfaces.find(i => i.wifi_details?.ssid && i.wifi_details.ssid !== 'Wi-Fi' && i.wifi_details.ssid !== 'Connected Wi-Fi')
+  const currentIfaceObj = interfaces.find(i => i.wifi_details?.is_connected && i.wifi_details?.ssid)
     || interfaces.find(i => i.wifi_details?.ssid)
     || interfaces.find(i => i.name === activeInterface && i.wifi_details)
     || interfaces.find(i => i.name === activeInterface)
     || interfaces[0];
 
-  const activeSsid = currentIfaceObj?.wifi_details?.ssid || (currentIfaceObj?.name?.includes('Wi-Fi') ? 'HARI NANDHINI' : null);
-  const activeSignal = currentIfaceObj?.wifi_details?.signal || '90%';
+  const activeSsid = isOnline ? (currentIfaceObj?.wifi_details?.ssid || null) : null;
+  const activeSignal = isOnline ? (currentIfaceObj?.wifi_details?.signal || '0%') : '0%';
 
   return (
     <header className="glass-card" style={{ padding: '16px 24px', marginBottom: '20px' }}>
@@ -65,17 +67,17 @@ const Navbar = ({
               <h1 style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                 NetSlice
               </h1>
-              <span className={`badge ${isRunning ? 'badge-emerald' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span className={`pulse-indicator ${isRunning ? '' : 'idle'}`}></span>
-                {isRunning ? 'Live Monitoring' : 'Paused'}
+              <span className={`badge ${!isOnline ? 'badge-rose' : (isRunning ? 'badge-emerald' : 'badge-slate')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span className={`pulse-indicator ${!isOnline ? 'idle' : (isRunning ? '' : 'idle')}`}></span>
+                {!isOnline ? 'Network Disconnected' : (isRunning ? 'Live Monitoring' : 'Paused')}
               </span>
 
               {mode === 'real_network' && (
-                <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Wifi size={13} />
-                  {activeSsid 
+                <span className={`badge ${isOnline && activeSsid ? 'badge-cyan' : 'badge-rose'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  {isOnline && activeSsid ? <Wifi size={13} /> : <WifiOff size={13} />}
+                  {isOnline && activeSsid 
                     ? `Wi-Fi: "${activeSsid}" (${activeSignal})`
-                    : 'Wi-Fi: Live Active'}
+                    : 'Wi-Fi: Disconnected'}
                 </span>
               )}
             </div>

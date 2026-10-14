@@ -4,11 +4,14 @@ import random
 from database import save_action_log
 
 class TrafficGenerator:
-    def __init__(self, slices_dict, db_path="network_logs.db"):
+    def __init__(self, slices_dict, db_path="network_logs.db", seed=None):
         self.slices = slices_dict
         self.db_path = db_path
         self.is_running = False
         self.thread = None
+        self.seed = seed
+        self.rng = random.Random(seed)
+        
         # Base traffic profiles in bits per second
         self.base_profiles = {
             "low_latency": 10_000_000,   # 10 Mbps base
@@ -17,6 +20,10 @@ class TrafficGenerator:
         }
         self.traffic_profiles = dict(self.base_profiles)
         self.active_scenario = "normal"
+
+    def set_seed(self, seed: int):
+        self.seed = seed
+        self.rng = random.Random(seed)
 
     def start(self):
         self.is_running = True
@@ -41,32 +48,54 @@ class TrafficGenerator:
 
     def apply_scenario(self, scenario_name: str):
         self.active_scenario = scenario_name
-        if scenario_name == "dos_attack":
-            # Overwhelm General slice
-            self.traffic_profiles["general"] = 70_000_000
-            self.traffic_profiles["low_latency"] = 12_000_000
-            self.traffic_profiles["high_bandwidth"] = 25_000_000
-            save_action_log(self.db_path, "SCENARIO", "Scenario Triggered: Simulated Denial of Service (DoS) attack on General-Purpose slice (70 Mbps flood)!")
-        elif scenario_name == "streaming_burst":
-            # Overwhelm High Bandwidth slice
-            self.traffic_profiles["high_bandwidth"] = 80_000_000
-            self.traffic_profiles["general"] = 10_000_000
-            self.traffic_profiles["low_latency"] = 10_000_000
-            save_action_log(self.db_path, "SCENARIO", "Scenario Triggered: 4K/8K Ultra-HD Video Streaming Burst (80 Mbps load on High-Bandwidth)!")
-        elif scenario_name == "fleet_surge":
-            # Surge on Low-Latency slice
+        
+        # 7 Canonical Evaluation Scenarios
+        if scenario_name in ["gaming_burst", "fleet_surge"]:
+            # Sudden gaming/interactive traffic burst on Low-Latency slice
             self.traffic_profiles["low_latency"] = 45_000_000
             self.traffic_profiles["high_bandwidth"] = 25_000_000
             self.traffic_profiles["general"] = 10_000_000
-            save_action_log(self.db_path, "SCENARIO", "Scenario Triggered: Autonomous Vehicle Fleet Critical Telemetry Surge (45 Mbps on Low-Latency)!")
-        elif scenario_name == "balanced_high":
-            self.traffic_profiles["low_latency"] = 25_000_000
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Sudden Low-Latency Interactive Gaming Burst (45 Mbps on LL slice)!")
+            
+        elif scenario_name in ["streaming_heavy", "streaming_burst"]:
+            # Streaming-heavy workload on High-Bandwidth slice
+            self.traffic_profiles["high_bandwidth"] = 75_000_000
+            self.traffic_profiles["low_latency"] = 10_000_000
+            self.traffic_profiles["general"] = 10_000_000
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Streaming-Heavy 4K UHD Workload (75 Mbps on High-BW slice)!")
+            
+        elif scenario_name in ["download_congestion", "dos_attack"]:
+            # Bulk download congestion saturating capacity
+            self.traffic_profiles["high_bandwidth"] = 80_000_000
+            self.traffic_profiles["general"] = 20_000_000
+            self.traffic_profiles["low_latency"] = 10_000_000
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Large File Download Congestion (80 Mbps High-BW + 20 Mbps General)!")
+            
+        elif scenario_name in ["mixed_concurrent", "balanced_high"]:
+            # Multiple concurrent applications across all slices
+            self.traffic_profiles["low_latency"] = 35_000_000
             self.traffic_profiles["high_bandwidth"] = 45_000_000
             self.traffic_profiles["general"] = 20_000_000
-            save_action_log(self.db_path, "SCENARIO", "Scenario Triggered: High Concurrent Congestion across all slices (90 Mbps total load)!")
-        else: # reset
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Multiple Concurrent Applications (LL: 35M, HB: 45M, Gen: 20M)!")
+            
+        elif scenario_name == "overload":
+            # Total demand strictly exceeds total network capacity (170 Mbps vs 100 Mbps)
+            self.traffic_profiles["low_latency"] = 50_000_000
+            self.traffic_profiles["high_bandwidth"] = 80_000_000
+            self.traffic_profiles["general"] = 40_000_000
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Extreme System Overload (170 Mbps demand against 100 Mbps capacity)!")
+            
+        elif scenario_name == "idle_low":
+            # Low-demand conditions with abundant idle resources
+            self.traffic_profiles["low_latency"] = 5_000_000
+            self.traffic_profiles["high_bandwidth"] = 10_000_000
+            self.traffic_profiles["general"] = 5_000_000
+            save_action_log(self.db_path, "SCENARIO", "Scenario: Low-Demand Conditions (Total load only 20 Mbps)!")
+            
+        else:  # "normal" baseline
             self.traffic_profiles = dict(self.base_profiles)
-            save_action_log(self.db_path, "SCENARIO", "Scenario Reset: Restored normal baseline traffic profiles (LL: 10M, HB: 30M, Gen: 10M)")
+            save_action_log(self.db_path, "SCENARIO", "Scenario Reset: Normal network baseline (LL: 10M, HB: 30M, Gen: 10M).")
+            
         return self.traffic_profiles
 
     def _generate_traffic(self):
@@ -74,8 +103,9 @@ class TrafficGenerator:
             # Simulate 10 times a second for smoother packet streams
             for slice_key, net_slice in self.slices.items():
                 demand = self.traffic_profiles[slice_key]
-                # Dynamic variation (+- 15%)
-                current_demand = demand * random.uniform(0.85, 1.15)
+                # Dynamic variation (+- 10%) using seeded generator
+                variation = self.rng.uniform(0.90, 1.10)
+                current_demand = demand * variation
                 
                 # Demand for this 0.1s interval
                 interval_demand = current_demand / 10.0 

@@ -29,14 +29,15 @@ const CustomTooltip = ({ active, payload, label, metricType }) => {
         boxShadow: 'var(--card-shadow)',
         fontSize: '0.78rem'
       }}>
-        <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
-          {timeFormatted}
+        <div style={{ color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+          <span>{timeFormatted}</span>
+          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{metricType}</span>
         </div>
         {payload.map((entry, idx) => (
-          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', margin: '2px 0' }}>
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', margin: '3px 0' }}>
             <span style={{ color: entry.color, fontWeight: '500' }}>{entry.name}:</span>
-            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-              {entry.value} {unit}
+            <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+              {entry.value !== null && entry.value !== undefined ? `${entry.value} ${unit}` : 'Unavailable'}
             </span>
           </div>
         ))}
@@ -46,24 +47,37 @@ const CustomTooltip = ({ active, payload, label, metricType }) => {
   return null;
 };
 
-const MetricsCharts = ({ history }) => {
+const MetricsCharts = ({ history, mode = 'real_network' }) => {
   const [metricType, setMetricType] = useState('throughput');
 
   const chartData = (history || []).map((snapshot) => {
     const slices = snapshot.slices || {};
     const timeLabel = new Date(snapshot.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // Physical throughput
+    const phyThroughput = snapshot.telemetry?.aggregate_mbps?.value ?? snapshot.phy_mbps ?? 0;
+
+    // Latency extraction (safe null for unavailable, preventing false zero spikes)
+    const extractLatency = (sliceObj) => {
+      if (!sliceObj) return null;
+      const ms = sliceObj.avg_latency_ms !== null && sliceObj.avg_latency_ms !== undefined 
+        ? sliceObj.avg_latency_ms 
+        : (sliceObj.avg_latency !== null && sliceObj.avg_latency !== undefined ? sliceObj.avg_latency * 1000 : null);
+      return (ms !== null && ms > 0) ? Number(ms.toFixed(1)) : null;
+    };
+
     return {
       timestamp: snapshot.timestamp,
       timeLabel: timeLabel,
       
+      phy_throughput: Number(phyThroughput.toFixed(1)),
       ll_throughput: Number((slices.low_latency?.throughput_mbps || 0).toFixed(1)),
       hb_throughput: Number((slices.high_bandwidth?.throughput_mbps || 0).toFixed(1)),
       gen_throughput: Number((slices.general?.throughput_mbps || 0).toFixed(1)),
 
-      ll_latency: Number(((slices.low_latency?.avg_latency_ms || (slices.low_latency?.avg_latency || 0) * 1000)).toFixed(1)),
-      hb_latency: Number(((slices.high_bandwidth?.avg_latency_ms || (slices.high_bandwidth?.avg_latency || 0) * 1000)).toFixed(1)),
-      gen_latency: Number(((slices.general?.avg_latency_ms || (slices.general?.avg_latency || 0) * 1000)).toFixed(1)),
+      ll_latency: extractLatency(slices.low_latency),
+      hb_latency: extractLatency(slices.high_bandwidth),
+      gen_latency: extractLatency(slices.general),
 
       ll_util: Number((slices.low_latency?.utilization || 0).toFixed(0)),
       hb_util: Number((slices.high_bandwidth?.utilization || 0).toFixed(0)),
@@ -75,15 +89,17 @@ const MetricsCharts = ({ history }) => {
     };
   });
 
+  const isReal = mode === 'real_network';
+
   return (
     <div className="glass-card" style={{ padding: '18px 22px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-            Live Traffic Graphs
+          <h3 style={{ fontSize: '0.98rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+            Live Network Telemetry Graphs
           </h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Real-time moving window over the last 60 seconds
+          <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+            Real-time moving window over the last 60 seconds • Clearly distinguished metric provenance
           </p>
         </div>
 
@@ -139,7 +155,7 @@ const MetricsCharts = ({ history }) => {
               color: metricType === 'drops' ? 'var(--text-primary)' : 'var(--text-secondary)'
             }}
           >
-            Packet Drops
+            Shaper Throttling (pkts)
           </button>
         </div>
       </div>
@@ -181,33 +197,144 @@ const MetricsCharts = ({ history }) => {
 
               {metricType === 'throughput' && (
                 <>
-                  <Line type="monotone" dataKey="ll_throughput" name="Calls & Gaming" stroke="var(--slice-low-latency)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="hb_throughput" name="Streaming & Video" stroke="var(--slice-high-bandwidth)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="gen_throughput" name="Standard Web" stroke="var(--slice-general)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  {isReal && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="phy_throughput" 
+                      name="Physical Adapter (Measured)" 
+                      stroke="#10b981" 
+                      strokeWidth={2} 
+                      strokeDasharray="4 4" 
+                      dot={false} 
+                      isAnimationActive={false} 
+                    />
+                  )}
+                  <Line 
+                    type="monotone" 
+                    dataKey="ll_throughput" 
+                    name={isReal ? "Low-Latency URLLC (Estimated)" : "Low-Latency URLLC (Simulated)"} 
+                    stroke="var(--slice-low-latency)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="hb_throughput" 
+                    name={isReal ? "High-Bandwidth eMBB (Estimated)" : "High-Bandwidth eMBB (Simulated)"} 
+                    stroke="var(--slice-high-bandwidth)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="gen_throughput" 
+                    name={isReal ? "Standard Web mMTC (Estimated)" : "Standard Web mMTC (Simulated)"} 
+                    stroke="var(--slice-general)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
                 </>
               )}
 
               {metricType === 'latency' && (
                 <>
-                  <Line type="monotone" dataKey="ll_latency" name="Calls & Gaming" stroke="var(--slice-low-latency)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="hb_latency" name="Streaming & Video" stroke="var(--slice-high-bandwidth)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="gen_latency" name="Standard Web" stroke="var(--slice-general)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ll_latency" 
+                    name={isReal ? "Low-Latency (Estimated from Probe)" : "Low-Latency (Simulated)"} 
+                    stroke="var(--slice-low-latency)" 
+                    strokeWidth={2} 
+                    connectNulls={false} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="hb_latency" 
+                    name={isReal ? "High-Bandwidth (Estimated from Probe)" : "High-Bandwidth (Simulated)"} 
+                    stroke="var(--slice-high-bandwidth)" 
+                    strokeWidth={2} 
+                    connectNulls={false} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="gen_latency" 
+                    name={isReal ? "Standard Web (Estimated from Probe)" : "Standard Web (Simulated)"} 
+                    stroke="var(--slice-general)" 
+                    strokeWidth={2} 
+                    connectNulls={false} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
                 </>
               )}
 
               {metricType === 'utilization' && (
                 <>
-                  <Line type="monotone" dataKey="ll_util" name="Calls & Gaming %" stroke="var(--slice-low-latency)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="hb_util" name="Streaming & Video %" stroke="var(--slice-high-bandwidth)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="gen_util" name="Standard Web %" stroke="var(--slice-general)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ll_util" 
+                    name="Low-Latency Utilization %" 
+                    stroke="var(--slice-low-latency)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="hb_util" 
+                    name="High-Bandwidth Utilization %" 
+                    stroke="var(--slice-high-bandwidth)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="gen_util" 
+                    name="Standard Web Utilization %" 
+                    stroke="var(--slice-general)" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    isAnimationActive={false} 
+                  />
                 </>
               )}
 
               {metricType === 'drops' && (
                 <>
-                  <Line type="stepAfter" dataKey="ll_drops" name="Low-Latency Drops" stroke="var(--slice-low-latency)" strokeWidth={1.5} dot={{ r: 2 }} isAnimationActive={false} />
-                  <Line type="stepAfter" dataKey="hb_drops" name="Streaming Drops" stroke="var(--slice-high-bandwidth)" strokeWidth={1.5} dot={{ r: 2 }} isAnimationActive={false} />
-                  <Line type="stepAfter" dataKey="gen_drops" name="Standard Drops" stroke="var(--slice-general)" strokeWidth={1.5} dot={{ r: 2 }} isAnimationActive={false} />
+                  <Line 
+                    type="stepAfter" 
+                    dataKey="ll_drops" 
+                    name="Low-Latency (Shaper Deficit pkts)" 
+                    stroke="var(--slice-low-latency)" 
+                    strokeWidth={1.5} 
+                    dot={{ r: 2 }} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="stepAfter" 
+                    dataKey="hb_drops" 
+                    name="High-Bandwidth (Shaper Deficit pkts)" 
+                    stroke="var(--slice-high-bandwidth)" 
+                    strokeWidth={1.5} 
+                    dot={{ r: 2 }} 
+                    isAnimationActive={false} 
+                  />
+                  <Line 
+                    type="stepAfter" 
+                    dataKey="gen_drops" 
+                    name="Standard Web (Shaper Deficit pkts)" 
+                    stroke="var(--slice-general)" 
+                    strokeWidth={1.5} 
+                    dot={{ r: 2 }} 
+                    isAnimationActive={false} 
+                  />
                 </>
               )}
             </LineChart>

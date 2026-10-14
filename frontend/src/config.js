@@ -4,4 +4,4 @@
 // 3. Custom host: specify VITE_API_URL in .env (e.g. http://192.168.1.50:8000)
 export const API_BASE = import.meta.env.VITE_API_URL !== undefined 
   ? import.meta.env.VITE_API_URL 
-  : (import.meta.env.DEV ? '' : 'http://127.0.0.1:8000');
+  : 'http://127.0.0.1:8000';

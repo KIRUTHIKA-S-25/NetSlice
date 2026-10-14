@@ -1,8 +1,17 @@
 import os
 import time
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, Float, String, Text, desc
+from sqlalchemy import create_engine, Column, Integer, Float, String, Text, desc, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=15000")
+    cursor.close()
 
 DEFAULT_DB_PATH = os.environ.get("DATABASE_PATH", "network_logs.db")
 
@@ -57,29 +66,91 @@ class ActionLog(Base):
             "message": self.message
         }
 
-_engine = None
-_SessionFactory = None
+class ExperimentResult(Base):
+    __tablename__ = "experiment_results"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(Float, index=True, nullable=False)
+    datetime_str = Column(String(30), nullable=False)
+    scenario_name = Column(String(100), nullable=False)
+    total_bandwidth_mbps = Column(Float, default=100.0)
+    duration_seconds = Column(Integer, default=20)
+    results_json = Column(Text, nullable=False)  # JSON-encoded dictionary
+
+    def to_dict(self):
+        import json
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp,
+            "datetime_str": self.datetime_str,
+            "scenario_name": self.scenario_name,
+            "total_bandwidth_mbps": self.total_bandwidth_mbps,
+            "duration_seconds": self.duration_seconds,
+            "results": json.loads(self.results_json) if self.results_json else {}
+        }
+
+class ApplicationProfileModel(Base):
+    __tablename__ = "application_profiles"
+
+    id = Column(String(50), primary_key=True)
+    name = Column(String(100), nullable=False)
+    category = Column(String(100), nullable=False)
+    preferred_slice = Column(String(50), nullable=False)
+    priority = Column(Integer, default=3)
+    target_max_latency_ms = Column(Float, default=50.0)
+    target_max_jitter_ms = Column(Float, default=10.0)
+    target_max_loss_rate = Column(Float, default=0.01)
+    min_throughput_mbps = Column(Float, default=5.0)
+    target_throughput_mbps = Column(Float, default=15.0)
+    delay_sensitive = Column(Integer, default=0)
+    burst_intensity = Column(Float, default=1.2)
+    description = Column(Text, default="")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "category": self.category,
+            "preferred_slice": self.preferred_slice,
+            "priority": self.priority,
+            "target_max_latency_ms": self.target_max_latency_ms,
+            "target_max_jitter_ms": self.target_max_jitter_ms,
+            "target_max_loss_rate": self.target_max_loss_rate,
+            "min_throughput_mbps": self.min_throughput_mbps,
+            "target_throughput_mbps": self.target_throughput_mbps,
+            "delay_sensitive": bool(self.delay_sensitive),
+            "burst_intensity": self.burst_intensity,
+            "description": self.description
+        }
+
+_engines = {}
+_session_factories = {}
 
 def get_engine(db_path=None):
-    global _engine, _SessionFactory
-    if db_path is None:
+    if db_path is None or db_path == "none" or db_path is False:
         db_path = DEFAULT_DB_PATH
-    if _engine is None:
-        _engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-        Base.metadata.create_all(_engine)
-        _SessionFactory = sessionmaker(bind=_engine)
-    return _engine
+    if db_path not in _engines:
+        eng = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False, "timeout": 15}
+        )
+        Base.metadata.create_all(eng)
+        _engines[db_path] = eng
+        _session_factories[db_path] = sessionmaker(bind=eng)
+    return _engines[db_path]
 
 def get_session(db_path=None):
+    if db_path is None or db_path == "none" or db_path is False:
+        db_path = DEFAULT_DB_PATH
     get_engine(db_path)
-    return _SessionFactory()
+    return _session_factories[db_path]()
 
 def init_db(db_path=None):
     return get_engine(db_path)
 
 def save_snapshot_logs(db_path=None, timestamp=None, slices_data=None, strategy="static"):
-    if db_path is None:
-        db_path = DEFAULT_DB_PATH
+    if db_path is None or db_path == "none" or db_path is False:
+        return
     session = get_session(db_path)
     dt_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
     logs = []
@@ -107,8 +178,8 @@ def save_snapshot_logs(db_path=None, timestamp=None, slices_data=None, strategy=
         session.close()
 
 def save_action_log(db_path=None, level="INFO", message=""):
-    if db_path is None:
-        db_path = DEFAULT_DB_PATH
+    if db_path is None or db_path == "none" or db_path is False:
+        return
     session = get_session(db_path)
     ts = time.time()
     dt_str = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
@@ -209,3 +280,108 @@ def get_analytics_summary(db_path=None):
         return {}
     finally:
         session.close()
+
+def save_experiment_result(db_path=None, scenario_name="normal", total_bandwidth_mbps=100.0, duration_seconds=20, results_dict=None):
+    import json
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
+    session = get_session(db_path)
+    ts = time.time()
+    dt_str = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        exp = ExperimentResult(
+            timestamp=ts,
+            datetime_str=dt_str,
+            scenario_name=scenario_name,
+            total_bandwidth_mbps=total_bandwidth_mbps,
+            duration_seconds=duration_seconds,
+            results_json=json.dumps(results_dict or {})
+        )
+        session.add(exp)
+        session.commit()
+        return exp.id
+    except Exception as e:
+        session.rollback()
+        print(f"Error saving experiment result: {e}")
+        return None
+    finally:
+        session.close()
+
+def get_experiment_results(db_path=None, limit=20):
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
+    session = get_session(db_path)
+    try:
+        records = session.query(ExperimentResult).order_by(desc(ExperimentResult.id)).limit(limit).all()
+        return [r.to_dict() for r in records]
+    except Exception as e:
+        print(f"Error fetching experiment results: {e}")
+        return []
+    finally:
+        session.close()
+
+def load_profiles_db(db_path=None):
+    """Loads all application QoS profiles from SQLite."""
+    if db_path is None or db_path == "none" or db_path is False:
+        db_path = DEFAULT_DB_PATH
+    session = get_session(db_path)
+    try:
+        records = session.query(ApplicationProfileModel).all()
+        return {r.id: r.to_dict() for r in records}
+    except Exception as e:
+        print(f"Error loading profiles from db: {e}")
+        return {}
+    finally:
+        session.close()
+
+def save_profile_db(db_path=None, profile_dict=None):
+    """Saves or updates an application profile in SQLite."""
+    if not profile_dict or not profile_dict.get("id"):
+        return False
+    if db_path is None or db_path == "none" or db_path is False:
+        db_path = DEFAULT_DB_PATH
+    session = get_session(db_path)
+    try:
+        p_id = profile_dict["id"]
+        existing = session.query(ApplicationProfileModel).filter_by(id=p_id).first()
+        if existing:
+            for k, v in profile_dict.items():
+                if k == "delay_sensitive":
+                    setattr(existing, k, int(bool(v)))
+                elif hasattr(existing, k):
+                    setattr(existing, k, v)
+        else:
+            new_p = ApplicationProfileModel(
+                id=p_id,
+                name=profile_dict.get("name", p_id),
+                category=profile_dict.get("category", "General"),
+                preferred_slice=profile_dict.get("preferred_slice", "general"),
+                priority=profile_dict.get("priority", 3),
+                target_max_latency_ms=profile_dict.get("target_max_latency_ms", 50.0),
+                target_max_jitter_ms=profile_dict.get("target_max_jitter_ms", 10.0),
+                target_max_loss_rate=profile_dict.get("target_max_loss_rate", 0.01),
+                min_throughput_mbps=profile_dict.get("min_throughput_mbps", 5.0),
+                target_throughput_mbps=profile_dict.get("target_throughput_mbps", 15.0),
+                delay_sensitive=int(bool(profile_dict.get("delay_sensitive", False))),
+                burst_intensity=profile_dict.get("burst_intensity", 1.2),
+                description=profile_dict.get("description", "")
+            )
+            session.add(new_p)
+        session.commit()
+        return True
+    except Exception as e:
+        session.rollback()
+        print(f"Error saving profile {profile_dict.get('id')}: {e}")
+        return False
+    finally:
+        session.close()
+
+def init_default_profiles_db(db_path=None, default_profiles_dict=None):
+    """Seeds default application profiles if table is empty."""
+    if not default_profiles_dict:
+        return
+    existing = load_profiles_db(db_path)
+    if not existing:
+        for p_id, p_data in default_profiles_dict.items():
+            save_profile_db(db_path, p_data)
+

@@ -8,7 +8,8 @@ import {
   Wifi,
   WifiOff,
   Sliders,
-  CheckCircle2
+  CheckCircle2,
+  BarChart3
 } from 'lucide-react';
 
 const Navbar = ({
@@ -30,6 +31,7 @@ const Navbar = ({
   mlInfo,
   onOpenAnalytics,
   onOpenProtocols,
+  onOpenExperiments,
   totalSnapshots
 }) => {
   // Accurately resolve active Wi-Fi interface and SSID
@@ -103,9 +105,9 @@ const Navbar = ({
           
           {/* Operational Mode */}
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-subtle)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-card)' }}>
-            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Source:</span>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px' }}>Mode:</span>
             <select
-              value={mode}
+              value={mode === 'real_network' ? 'real_network_monitor' : mode}
               onChange={(e) => onModeChange && onModeChange(e.target.value)}
               disabled={isRunning}
               style={{
@@ -118,8 +120,9 @@ const Navbar = ({
                 cursor: isRunning ? 'not-allowed' : 'pointer'
               }}
             >
-              <option value="real_network" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Live Network (Wi-Fi)</option>
-              <option value="simulation" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>Simulation Sandbox</option>
+              <option value="simulation" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>1. Simulation Mode</option>
+              <option value="real_network_monitor" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>2. Real-Network Monitoring</option>
+              <option value="real_network_enforce" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>3. Real-Network Enforcement</option>
             </select>
           </div>
 
@@ -212,6 +215,17 @@ const Navbar = ({
           >
             <Wifi size={14} />
             <span>Protocols & ML</span>
+          </button>
+
+          {/* Fair Benchmark & QoS Evaluation Modal */}
+          <button
+            className="btn-secondary"
+            onClick={onOpenExperiments}
+            title="Fair 3-Strategy Evaluation & QoS Application Profiles"
+            style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.35)', color: '#818cf8', fontWeight: 600 }}
+          >
+            <BarChart3 size={14} />
+            <span>Benchmark & QoS</span>
           </button>
 
         </div>

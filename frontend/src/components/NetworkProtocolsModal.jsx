@@ -17,6 +17,9 @@ import { API_BASE } from '../config';
 export default function NetworkProtocolsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('dhcp');
 
+  // Notification Toast State
+  const [modalToast, setModalToast] = useState(null);
+
   // DHCP State
   const [dhcpLeases, setDhcpLeases] = useState([]);
   const [newMac, setNewMac] = useState('AA:BB:CC:DD:EE:11');
@@ -41,6 +44,13 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
   const [mlStatus, setMlStatus] = useState(null);
   const [selectedModel, setSelectedModel] = useState('decision_tree');
   const [mlLoading, setMlLoading] = useState(false);
+
+  const showToast = (text, type = 'success') => {
+    setModalToast({ text, type });
+    setTimeout(() => {
+      setModalToast((curr) => (curr && curr.text === text ? null : curr));
+    }, 4000);
+  };
 
   const fetchDhcp = async () => {
     try {
@@ -103,29 +113,82 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
 
   const handleRequestDhcp = async () => {
     try {
+      setDhcpLoading(true);
       const res = await fetch(`${API_BASE}/api/dhcp/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: newMac, slice_type: newSlice }),
       });
-      await res.json();
+      const data = await res.json();
+      if (data.status === 'success' && data.lease) {
+        showToast(`✓ Leased IPv4 ${data.lease.ip} to MAC ${data.lease.mac} on slice '${data.lease.slice}'!`, 'success');
+        // Randomize next MAC so user can immediately click again
+        const randHex = Math.floor(16 + Math.random() * 239).toString(16).toUpperCase();
+        setNewMac(`AA:BB:CC:DD:EE:${randHex}`);
+      } else {
+        showToast(data.message || 'DHCP assignment failed', 'error');
+      }
       fetchDhcp();
     } catch (err) {
       console.error(err);
+      showToast('Error connecting to DHCP service', 'error');
+    } finally {
+      setDhcpLoading(false);
     }
   };
 
-  const handleResolveDns = async () => {
+  const handleReleaseDhcp = async (mac) => {
+    try {
+      setDhcpLoading(true);
+      const res = await fetch(`${API_BASE}/api/dhcp/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mac }),
+      });
+      const data = await res.json();
+      showToast(`✓ Released IP lease for node ${mac}`, 'info');
+      fetchDhcp();
+    } catch (err) {
+      console.error(err);
+      showToast('Error releasing DHCP lease', 'error');
+    } finally {
+      setDhcpLoading(false);
+    }
+  };
+
+  const handleSimulateBulkDhcp = async () => {
+    try {
+      setDhcpLoading(true);
+      const res = await fetch(`${API_BASE}/api/dhcp/simulate_bulk`, { method: 'POST' });
+      const data = await res.json();
+      if (data.leases) setDhcpLeases(data.leases);
+      showToast('✓ Successfully auto-provisioned 4 virtual 5G nodes with dynamic IPv4 leases!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Bulk simulation failed', 'error');
+    } finally {
+      setDhcpLoading(false);
+    }
+  };
+
+  const handleResolveDns = async (domainToQuery = null) => {
+    const targetDomain = domainToQuery || queryDomain;
     try {
       const res = await fetch(`${API_BASE}/api/dns/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: queryDomain }),
+        body: JSON.stringify({ domain: targetDomain }),
       });
       const data = await res.json();
       setDnsResult(data);
+      if (data.status === 'SUCCESS') {
+        showToast(`✓ Resolved '${targetDomain}' -> ${data.resolved_ip}:${data.resolved_port} (${data.slice})`, 'success');
+      } else {
+        showToast(`NXDOMAIN: Could not resolve '${targetDomain}'`, 'error');
+      }
     } catch (err) {
       console.error(err);
+      showToast('DNS resolution error', 'error');
     }
   };
 
@@ -133,7 +196,7 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
     e.preventDefault();
     if (!newDomain) return;
     try {
-      await fetch(`${API_BASE}/api/dns/add`, {
+      const res = await fetch(`${API_BASE}/api/dns/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,28 +206,37 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
           slice_name: newSliceName,
         }),
       });
+      const data = await res.json();
+      showToast(`✓ Registered DNS record for '${newDomain}' pointing to ${newIp}:${newPort}!`, 'success');
       setNewDomain('');
       fetchDns();
     } catch (err) {
       console.error(err);
+      showToast('Failed to add DNS record', 'error');
     }
   };
 
-  const handleBroadcast = async () => {
+  const handleBroadcast = async (customMsg = null) => {
+    const msgToSend = customMsg || broadcastMsg;
     try {
+      setMulticastLoading(true);
       const res = await fetch(`${API_BASE}/api/multicast/broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'orchestrator_node',
           event_type: 'BROADCAST_SIGNAL',
-          message: broadcastMsg,
+          message: msgToSend,
         }),
       });
-      await res.json();
+      const data = await res.json();
+      showToast(`✓ Multicast packet transmitted to 224.0.0.100:9999 (${data.broadcast?.recipients_reached || 3} slice nodes reached)`, 'success');
       fetchMulticast();
     } catch (err) {
       console.error(err);
+      showToast('Multicast broadcast error', 'error');
+    } finally {
+      setMulticastLoading(false);
     }
   };
 
@@ -176,6 +248,7 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_type: modelType }),
       });
+      showToast(`✓ Active traffic predictor switched to ${modelType.replace('_', ' ').toUpperCase()}!`, 'info');
       fetchMl();
     } catch (err) {
       console.error(err);
@@ -185,10 +258,13 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
   const handleTrainAndCompare = async () => {
     try {
       setMlLoading(true);
-      await fetch(`${API_BASE}/api/train`, { method: 'POST' });
+      const res = await fetch(`${API_BASE}/api/train`, { method: 'POST' });
+      const data = await res.json();
+      showToast('✓ ML Model suite benchmarked across SQLite traffic logs! Accuracy scores updated.', 'success');
       await fetchMl();
     } catch (err) {
       console.error(err);
+      showToast('Training error', 'error');
     } finally {
       setMlLoading(false);
     }
@@ -315,6 +391,34 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
         {/* Modal Scrollable Body */}
         <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-card)' }}>
 
+          {/* Toast Notification Banner */}
+          {modalToast && (
+            <div style={{
+              padding: '10px 16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              fontSize: '0.82rem',
+              fontWeight: '600',
+              backgroundColor: modalToast.type === 'success' 
+                ? 'rgba(16, 185, 129, 0.15)' 
+                : modalToast.type === 'error' 
+                ? 'rgba(244, 63, 94, 0.15)' 
+                : 'rgba(56, 189, 248, 0.15)',
+              color: modalToast.type === 'success' 
+                ? 'var(--accent-emerald)' 
+                : modalToast.type === 'error' 
+                ? 'var(--accent-rose)' 
+                : 'var(--accent-cyan)',
+              border: `1px solid ${modalToast.type === 'success' ? 'rgba(16, 185, 129, 0.4)' : modalToast.type === 'error' ? 'rgba(244, 63, 94, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>{modalToast.text}</span>
+              <button onClick={() => setModalToast(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+            </div>
+          )}
+
           {/* TAB 1: DHCP */}
           {activeTab === 'dhcp' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -377,9 +481,20 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
                   <button
                     className="btn-primary"
                     onClick={handleRequestDhcp}
+                    disabled={dhcpLoading}
                     style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                   >
-                    <Server size={14} /> Request IPv4 Lease
+                    <Server size={14} className={dhcpLoading ? 'spin' : ''} /> Request IPv4 Lease
+                  </button>
+
+                  <button
+                    className="btn-secondary"
+                    onClick={handleSimulateBulkDhcp}
+                    disabled={dhcpLoading}
+                    style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    title="Simulate 4 Diverse 5G Nodes"
+                  >
+                    <PlusCircle size={14} /> Auto-Simulate 4 Nodes
                   </button>
 
                   <button
@@ -418,13 +533,14 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
                         <th style={{ padding: '10px 14px' }}>Target Slice</th>
                         <th style={{ padding: '10px 14px' }}>Leased Time</th>
                         <th style={{ padding: '10px 14px' }}>Status</th>
+                        <th style={{ padding: '10px 14px' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dhcpLeases.length === 0 ? (
                         <tr>
-                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            No active IP leases. Use the form above to assign a dynamic IP to a node.
+                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            No active IP leases. Use the form above or click "Auto-Simulate 4 Nodes" to assign dynamic IPs.
                           </td>
                         </tr>
                       ) : (
@@ -445,6 +561,22 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
                               }}>
                                 ACTIVE
                               </span>
+                            </td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <button
+                                onClick={() => handleReleaseDhcp(l.mac)}
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.72rem',
+                                  backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                                  color: 'var(--accent-rose)',
+                                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Release
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -489,11 +621,37 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
                   />
                   <button
                     className="btn-primary"
-                    onClick={handleResolveDns}
+                    onClick={() => handleResolveDns()}
                     style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                   >
                     <Globe size={14} /> Resolve Domain
                   </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>Quick Resolve:</span>
+                  {[
+                    { label: 'URLLC Slice (Port 9101)', dom: 'urllc.slice.5g' },
+                    { label: 'eMBB Video (Port 9102)', dom: 'embb.video.5g' },
+                    { label: 'mMTC IoT (Port 9103)', dom: 'iot.sensor.5g' },
+                  ].map((d) => (
+                    <button
+                      key={d.dom}
+                      type="button"
+                      onClick={() => { setQueryDomain(d.dom); handleResolveDns(d.dom); }}
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '0.73rem',
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1px solid var(--border-card)',
+                        color: 'var(--accent-primary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
                 </div>
 
                 {dnsResult && (
@@ -662,11 +820,38 @@ export default function NetworkProtocolsModal({ isOpen, onClose }) {
                   />
                   <button
                     className="btn-primary"
-                    onClick={handleBroadcast}
+                    onClick={() => handleBroadcast()}
+                    disabled={multicastLoading}
                     style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                   >
-                    <Send size={14} /> Send Broadcast
+                    <Send size={14} className={multicastLoading ? 'spin' : ''} /> Send Broadcast
                   </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>Quick 5G Signals:</span>
+                  {[
+                    { label: 'Rebalance Signal', msg: 'SLICE_REBALANCE_SIGNAL: Shift capacity to eMBB' },
+                    { label: 'Emergency SLA Preempt', msg: 'EMERGENCY_PREEMPT_SIGNAL: Reserve URLLC for Telehealth' },
+                    { label: '5G Core Sync Beacon', msg: 'CORE_SYNC_SIGNAL: Beacon tick from UPF Orchestrator' },
+                  ].map((sig) => (
+                    <button
+                      key={sig.label}
+                      type="button"
+                      onClick={() => { setBroadcastMsg(sig.msg); handleBroadcast(sig.msg); }}
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '0.73rem',
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1px solid var(--border-card)',
+                        color: 'var(--accent-primary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {sig.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

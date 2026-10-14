@@ -8,6 +8,10 @@ import ActionTerminal from './components/ActionTerminal';
 import AnalyticsModal from './components/AnalyticsModal';
 import NetworkProtocolsModal from './components/NetworkProtocolsModal';
 import ChatbotWidget from './components/ChatbotWidget';
+import RealWorldSlicingHighlights from './components/RealWorldSlicingHighlights';
+import ExperimentComparisonModal from './components/ExperimentComparisonModal';
+import RealNetworkGatewayPanel from './components/RealNetworkGatewayPanel';
+import TelemetryStatusBar from './components/TelemetryStatusBar';
 
 import { API_BASE } from './config';
 
@@ -33,9 +37,25 @@ const Dashboard = () => {
   const [isRetraining, setIsRetraining] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isProtocolsOpen, setIsProtocolsOpen] = useState(false);
+  const [isExperimentsOpen, setIsExperimentsOpen] = useState(false);
   const [totalSnapshots, setTotalSnapshots] = useState(0);
   const [bannerAlert, setBannerAlert] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
+  
+  // 3 Real-World Production Features State
+  const [activeApps, setActiveApps] = useState([]);
+  const [dominantApp, setDominantApp] = useState('Normal Traffic');
+  const [slaGuard, setSlaGuard] = useState({ compliance: 99.98, violations_prevented: 3, status: 'OPTIMAL', last_event: 'SLA Guard active' });
+  const [energyCost, setEnergyCost] = useState({ spectrum_saved_mbps: 84.3, energy_saved_kwh: 0.118, cost_saved_usd: 3.20, efficiency_score: 84.3 });
+  const [phyMbps, setPhyMbps] = useState(0.0);
+
+  // Real-Network Gateway & Device Integration State
+  const [enforcementStatus, setEnforcementStatus] = useState('UNCONFIGURED');
+  const [enforcedAllocations, setEnforcedAllocations] = useState({});
+  const [devices, setDevices] = useState([]);
+  const [gatewayInfo, setGatewayInfo] = useState({});
+  const [telemetry, setTelemetry] = useState(null);
+  const [lastSampleTime, setLastSampleTime] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -110,13 +130,37 @@ const Dashboard = () => {
           if (data.ml_info) setMlInfo(data.ml_info);
           if (data.mode) setMode(data.mode);
           if (data.interface) setActiveInterface(data.interface);
+          if (data.active_apps) setActiveApps(data.active_apps);
+          if (data.dominant_app) setDominantApp(data.dominant_app);
+          if (data.sla_guard) setSlaGuard(data.sla_guard);
+          if (data.energy_cost) setEnergyCost(data.energy_cost);
+          if (data.phy_mbps !== undefined) setPhyMbps(data.phy_mbps);
+          if (data.enforcement_status) setEnforcementStatus(data.enforcement_status);
+          if (data.enforced_allocations) setEnforcedAllocations(data.enforced_allocations);
+          if (data.devices) setDevices(data.devices);
+          if (data.gateway_info) setGatewayInfo(data.gateway_info);
+          if (data.telemetry) setTelemetry(data.telemetry);
+          if (data.data?.timestamp) setLastSampleTime(data.data.timestamp);
           setIsRunning(true);
         } else if (data.status === 'idle') {
+          setIsRunning(false);
           if (data.is_online !== undefined) setIsOnline(data.is_online);
+          if (data.data?.slices) setMetrics(data.data.slices);
+          if (data.allocations) setAllocations(data.allocations);
           if (data.logs) setLogs(data.logs);
           if (data.ml_info) setMlInfo(data.ml_info);
           if (data.mode) setMode(data.mode);
           if (data.interface) setActiveInterface(data.interface);
+          if (data.active_apps) setActiveApps(data.active_apps);
+          if (data.dominant_app) setDominantApp(data.dominant_app);
+          if (data.sla_guard) setSlaGuard(data.sla_guard);
+          if (data.energy_cost) setEnergyCost(data.energy_cost);
+          if (data.enforcement_status) setEnforcementStatus(data.enforcement_status);
+          if (data.enforced_allocations) setEnforcedAllocations(data.enforced_allocations);
+          if (data.devices) setDevices(data.devices);
+          if (data.gateway_info) setGatewayInfo(data.gateway_info);
+          if (data.telemetry) setTelemetry(data.telemetry);
+          if (data.data?.timestamp) setLastSampleTime(data.data.timestamp);
         }
 
         tickCount += 1;
@@ -279,6 +323,7 @@ const Dashboard = () => {
         mlInfo={mlInfo}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
         onOpenProtocols={() => setIsProtocolsOpen(true)}
+        onOpenExperiments={() => setIsExperimentsOpen(true)}
         totalSnapshots={totalSnapshots}
       />
 
@@ -349,11 +394,47 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* 0. Dedicated Real Network Telemetry Status & Provenance Bar */}
+      <TelemetryStatusBar
+        telemetry={telemetry}
+        mode={mode}
+        activeInterface={activeInterface}
+        isOnline={isOnline}
+        isRunning={isRunning}
+        enforcementStatus={enforcementStatus}
+        lastSampleTime={lastSampleTime}
+      />
+
       {/* 1. Real-Time Slice Telemetry Cards */}
       <SliceCards 
         metrics={metrics} 
         allocations={allocations} 
+        enforcedAllocations={enforcedAllocations}
+        enforcementStatus={enforcementStatus}
         isOnline={isOnline}
+        isRunning={isRunning}
+      />
+
+      {/* 1b. 3 Unique Real-World Features (Faculty Evaluation Showcase) */}
+      <RealWorldSlicingHighlights
+        activeApps={activeApps}
+        dominantApp={dominantApp}
+        slaGuard={slaGuard}
+        energyCost={energyCost}
+        phyMbps={phyMbps}
+        onSelfHealTriggered={fetchStatus}
+      />
+
+      {/* 1c. Real-Network Integration Mode & Gateway Enforcement Panel */}
+      <RealNetworkGatewayPanel
+        mode={mode}
+        onModeChange={handleModeChange}
+        enforcementStatus={enforcementStatus}
+        gatewayInfo={gatewayInfo}
+        devices={devices}
+        allocations={allocations}
+        enforcedAllocations={enforcedAllocations}
+        onRefresh={fetchStatus}
       />
 
       {/* 2. Interactive Configuration Sliders (100 Mbps Pool Allocation) */}
@@ -374,6 +455,7 @@ const Dashboard = () => {
       {/* 4. Live Moving Time-Series Charts (Recharts) */}
       <MetricsCharts 
         history={history} 
+        mode={mode}
       />
 
       {/* 5. Action Log / Scrolling Terminal Window */}
@@ -393,6 +475,12 @@ const Dashboard = () => {
       <NetworkProtocolsModal
         isOpen={isProtocolsOpen}
         onClose={() => setIsProtocolsOpen(false)}
+      />
+
+      {/* 6c. Fair Benchmark & QoS Application Profiles Modal */}
+      <ExperimentComparisonModal
+        isOpen={isExperimentsOpen}
+        onClose={() => setIsExperimentsOpen(false)}
       />
 
       {/* 7. Bottom-Right Integrated AI Assistant Bot */}

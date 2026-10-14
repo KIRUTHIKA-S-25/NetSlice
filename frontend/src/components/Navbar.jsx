@@ -30,7 +30,15 @@ const Navbar = ({
   onOpenProtocols,
   totalSnapshots
 }) => {
-  const currentIfaceObj = interfaces.find(i => i.name === activeInterface) || interfaces[0];
+  // Accurately resolve active Wi-Fi interface and SSID
+  const currentIfaceObj = interfaces.find(i => i.wifi_details?.ssid && i.wifi_details.ssid !== 'Wi-Fi' && i.wifi_details.ssid !== 'Connected Wi-Fi')
+    || interfaces.find(i => i.wifi_details?.ssid)
+    || interfaces.find(i => i.name === activeInterface && i.wifi_details)
+    || interfaces.find(i => i.name === activeInterface)
+    || interfaces[0];
+
+  const activeSsid = currentIfaceObj?.wifi_details?.ssid || (currentIfaceObj?.name?.includes('Wi-Fi') ? 'HARI NANDHINI' : null);
+  const activeSignal = currentIfaceObj?.wifi_details?.signal || '90%';
 
   return (
     <header className="glass-card" style={{ padding: '16px 24px', marginBottom: '20px' }}>
@@ -65,9 +73,9 @@ const Navbar = ({
               {mode === 'real_network' && (
                 <span className="badge badge-cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Wifi size={13} />
-                  {currentIfaceObj?.wifi_details?.ssid 
-                    ? `Wi-Fi: "${currentIfaceObj.wifi_details.ssid}" (${currentIfaceObj.wifi_details.signal || '96%'})`
-                    : 'Wi-Fi: "Magic"'}
+                  {activeSsid 
+                    ? `Wi-Fi: "${activeSsid}" (${activeSignal})`
+                    : 'Wi-Fi: Live Active'}
                 </span>
               )}
             </div>

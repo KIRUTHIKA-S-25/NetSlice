@@ -91,8 +91,9 @@ const Dashboard = () => {
     fetchAnalyticsCount();
   }, []);
 
-  // Poll metrics every 1 second when active or check logs
+  // Poll metrics every 1 second and refresh interfaces every 3 seconds
   useEffect(() => {
+    let tickCount = 0;
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/metrics`);
@@ -112,6 +113,11 @@ const Dashboard = () => {
           if (data.ml_info) setMlInfo(data.ml_info);
           if (data.mode) setMode(data.mode);
           if (data.interface) setActiveInterface(data.interface);
+        }
+
+        tickCount += 1;
+        if (tickCount % 3 === 0) {
+          fetchInterfaces();
         }
       } catch (e) {
         // backend offline

@@ -39,8 +39,8 @@ app.add_middleware(
 # Global State
 simulation_state = {
     "is_running": False,
-    "strategy": "static",
-    "mode": "simulation", # "simulation" | "real_network"
+    "strategy": "ai_assisted",
+    "mode": "real_network", # "simulation" | "real_network"
     "active_interface": "Wi-Fi",
     "slices": None,
     "traffic_gen": None,
@@ -54,6 +54,40 @@ simulation_state = {
         "general": 20.0
     }
 }
+
+def auto_start_real_engine():
+    """Starts the real physical Wi-Fi monitoring and dynamic slicing engine on application launch."""
+    interfaces = get_available_interfaces()
+    wifi_iface = next((i for i in interfaces if i.get("wifi_details") or "Wi-Fi" in i["name"]), None)
+    iface_name = wifi_iface["name"] if wifi_iface else "Wi-Fi"
+    simulation_state["active_interface"] = iface_name
+    simulation_state["mode"] = "real_network"
+    simulation_state["strategy"] = "ai_assisted"
+
+    r_mgr = RealNetworkManager(
+        interface_name=iface_name,
+        db_path="network_logs.db"
+    )
+    simulation_state["real_net_mgr"] = r_mgr
+    simulation_state["slices"] = r_mgr.slices
+    alloc_engine = ResourceAllocationEngine(simulation_state["slices"], db_path="network_logs.db")
+    simulation_state["allocation_engine"] = alloc_engine
+    r_mgr.set_allocation_engine(alloc_engine)
+
+    if simulation_state["custom_static"]:
+        alloc_engine.set_custom_static_config(simulation_state["custom_static"])
+
+    r_mgr.start()
+    simulation_state["is_running"] = True
+    save_action_log(
+        "network_logs.db",
+        "SYSTEM",
+        f"REAL-TIME NETWORK auto-started on interface '{iface_name}' with AI Auto-Balance slicing active."
+    )
+
+@app.on_event("startup")
+def on_app_startup():
+    auto_start_real_engine()
 
 class ConfigPayload(BaseModel):
     strategy: str
@@ -85,7 +119,8 @@ def get_system_status():
     interfaces = get_available_interfaces()
     current_iface = simulation_state["active_interface"]
     if interfaces and not any(i["name"] == current_iface for i in interfaces):
-        current_iface = interfaces[0]["name"]
+        wifi_match = next((i for i in interfaces if i.get("wifi_details") or "Wi-Fi" in i["name"]), interfaces[0])
+        current_iface = wifi_match["name"]
         simulation_state["active_interface"] = current_iface
     return {
         "is_running": simulation_state["is_running"],
@@ -144,6 +179,7 @@ def start_simulation(payload: ConfigPayload):
         simulation_state["real_net_mgr"] = r_mgr
         simulation_state["slices"] = r_mgr.slices
         simulation_state["allocation_engine"] = ResourceAllocationEngine(simulation_state["slices"], db_path="network_logs.db")
+        r_mgr.set_allocation_engine(simulation_state["allocation_engine"])
         
         if simulation_state["custom_static"]:
             simulation_state["allocation_engine"].set_custom_static_config(simulation_state["custom_static"])
